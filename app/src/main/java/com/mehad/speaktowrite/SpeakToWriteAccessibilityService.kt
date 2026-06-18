@@ -39,14 +39,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "SpeakToWrite"
         private const val SAMPLE_RATE = 16000
-        private const val BTN_DP = 56
-        private const val PAD_DP = 14
+        private const val BTN_DP = 48
+        private const val PAD_DP = 12
         private const val MARGIN_DP = 16
         private const val TAP_THRESHOLD_DP = 10
 
-        private const val COLOR_IDLE = 0xFF388E3C.toInt()
-        private const val COLOR_RECORDING = 0xFFE53935.toInt()
-        private const val COLOR_BUSY = 0xFF555555.toInt()
+        private const val COLOR_IDLE = 0xDD1C1C1E.toInt()
+        private const val COLOR_RECORDING = 0xDDEF4444.toInt()
+        private const val COLOR_BUSY = 0xDD6B6B6B.toInt()
 
         var instance: SpeakToWriteAccessibilityService? = null
             private set
@@ -308,7 +308,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             
             handler.post {
                 if (text.isBlank()) {
-                    toast("Could not transcribe audio")
+                    toast("No audio to transcribe")
                 } else {
                     injectText(text)
                 }
