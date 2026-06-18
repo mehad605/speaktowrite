@@ -143,6 +143,41 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
     var showPromptDialog by remember { mutableStateOf(false) }
     var editingPrompt by remember { mutableStateOf<PromptPreset?>(null) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+    var isImportingModel by remember { mutableStateOf(false) }
+    
+    var customModels by remember { mutableStateOf(emptyList<com.mehad.speaktowrite.models.Model>()) }
+    fun refreshCustomModels() {
+        val outDir = java.io.File(context.filesDir, "models")
+        if (outDir.exists()) {
+            val folders = outDir.listFiles()?.filter { it.isDirectory } ?: emptyList()
+            val catalogArchives = MODEL_CATALOG.map { it.archive }
+            val custom = folders.filter { it.name !in catalogArchives }.map {
+                com.mehad.speaktowrite.models.Model(it.name, it.name, 0)
+            }
+            customModels = custom
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        refreshCustomModels()
+    }
+    
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            isImportingModel = true
+            coroutineScope.launch {
+                val res = com.mehad.speaktowrite.models.ModelImporter.importModel(context, uri)
+                isImportingModel = false
+                if (res is com.mehad.speaktowrite.models.ModelImporter.ImportResult.Success) {
+                    android.widget.Toast.makeText(context, "Model imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                    refreshCustomModels()
+                } else if (res is com.mehad.speaktowrite.models.ModelImporter.ImportResult.Error) {
+                    android.widget.Toast.makeText(context, res.message, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     val scrollState = rememberScrollState()
 
@@ -196,25 +231,58 @@ fun MainScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(24.dp))
             
             // Engine Section
-            SectionTitle("Models", Modifier.padding(horizontal = 24.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionTitle("Models", Modifier)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { showHelpDialog = true }, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Info, contentDescription = "Help", tint = SolidGreen.copy(alpha = 0.7f))
+                    }
+                }
+                if (isImportingModel) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SolidGreen, strokeWidth = 2.dp)
+                } else {
+                    IconButton(onClick = { importLauncher.launch("*/*") }, modifier = Modifier.size(24.dp)) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Folder, contentDescription = "Import from storage", tint = SolidGreen)
+                    }
+                }
+            }
             SolidCard {
-                MODEL_CATALOG.forEachIndexed { index, model ->
-                    val downloader = downloaders[model]!!
-                    val state by downloader.state.collectAsState()
+                val allModels = MODEL_CATALOG + customModels
+                allModels.forEachIndexed { index, model ->
+                    val isCustom = model in customModels
+                    val state = if (isCustom) {
+                        com.mehad.speaktowrite.models.DownloadState.Done
+                    } else {
+                        downloaders[model]?.state?.collectAsState()?.value ?: com.mehad.speaktowrite.models.DownloadState.Idle
+                    }
                     
                     ModelRowItem(
-                        modelName = model.name,
-                        modelSize = "${model.sizeMb} MB",
+                        modelName = if (isCustom) "Custom: ${model.name.take(15)}..." else model.name,
+                        modelSize = if (isCustom) "Local" else "${model.sizeMb} MB",
                         state = state,
                         isSelected = selectedLocalModel == model.archive,
                         onRowClick = { TranscriberManager.loadModel(context, model.archive) },
-                        onDownloadClick = { downloader.startOrResume(coroutineScope) },
-                        onCancelClick = { downloader.cancel() },
-                        onPauseClick = { downloader.pause() },
-                        onResumeClick = { downloader.startOrResume(coroutineScope) },
-                        onDeleteClick = { downloader.deleteModel() }
+                        onDownloadClick = { downloaders[model]?.startOrResume(coroutineScope) },
+                        onCancelClick = { downloaders[model]?.cancel() },
+                        onPauseClick = { downloaders[model]?.pause() },
+                        onResumeClick = { downloaders[model]?.startOrResume(coroutineScope) },
+                        onDeleteClick = {
+                            if (isCustom) {
+                                java.io.File(context.filesDir, "models/${model.archive}").deleteRecursively()
+                                refreshCustomModels()
+                            } else {
+                                downloaders[model]?.deleteModel()
+                            }
+                        }
                     )
-                    if (index < MODEL_CATALOG.size - 1) {
+                    if (index < allModels.size - 1) {
                         HorizontalDivider(color = SolidGreen.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
@@ -415,7 +483,31 @@ fun MainScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    if (showPromptDialog) {
+    if (showHelpDialog) {
+        AlertDialog(
+                onDismissRequest = { showHelpDialog = false },
+                containerColor = DarkSurface,
+                title = { Text("Custom Models Guide", color = SolidGreen, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        Text("You can import custom offline speech-to-text models for Sherpa-ONNX.", color = Color.White)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Requirements:", color = SolidGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("• Must be a compressed archive (.zip, .tar.bz2, .tar.gz).", color = Color.LightGray, fontSize = 14.sp)
+                        Text("• Must contain the model's .onnx files and tokens.txt.", color = Color.LightGray, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Note: Download a compatible Android model directly from the k2-fsa/sherpa-onnx repository.", color = Color.Gray, fontSize = 12.sp)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showHelpDialog = false }) {
+                        Text("Got it", color = SolidGreen)
+                    }
+                }
+            )
+        }
+
+        if (showPromptDialog) {
         var pTitle by remember { mutableStateOf(editingPrompt?.title ?: "") }
         var pContent by remember { mutableStateOf(editingPrompt?.content ?: "") }
 
