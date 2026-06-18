@@ -5,20 +5,38 @@ import android.util.Log
 import com.k2fsa.sherpa.onnx.*
 import java.io.File
 
-class LocalTranscriber private constructor(private val recognizer: OfflineRecognizer) {
+class LocalTranscriber private constructor(
+    private val offlineRecognizer: OfflineRecognizer? = null,
+    private val onlineRecognizer: OnlineRecognizer? = null
+) {
 
     fun transcribe(samples: FloatArray, sampleRate: Int = 16000): String {
-        val stream = recognizer.createStream()
-        stream.acceptWaveform(samples, sampleRate)
-        recognizer.decode(stream)
-        val result = recognizer.getResult(stream)
-        stream.release()
-        return result.text.trim()
+        return if (offlineRecognizer != null) {
+            val stream = offlineRecognizer.createStream()
+            stream.acceptWaveform(samples, sampleRate)
+            offlineRecognizer.decode(stream)
+            val result = offlineRecognizer.getResult(stream)
+            stream.release()
+            result.text.trim()
+        } else if (onlineRecognizer != null) {
+            val stream = onlineRecognizer.createStream()
+            stream.acceptWaveform(samples, sampleRate)
+            stream.inputFinished()
+            while (onlineRecognizer.isReady(stream)) {
+                onlineRecognizer.decode(stream)
+            }
+            val result = onlineRecognizer.getResult(stream)
+            stream.release()
+            result.text.trim()
+        } else {
+            ""
+        }
     }
 
     fun release() {
         try {
-            recognizer.release()
+            offlineRecognizer?.release()
+            onlineRecognizer?.release()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -34,19 +52,58 @@ class LocalTranscriber private constructor(private val recognizer: OfflineRecogn
                 return null
             }
 
-            val config = detectModelConfig(modelDir) ?: run {
-                Log.e(TAG, "Could not detect model type in $modelDir")
-                return null
-            }
-
             return try {
-                val recognizer = OfflineRecognizer(assetManager = null, config = config)
-                Log.i(TAG, "Loaded model: $modelName")
-                LocalTranscriber(recognizer)
+                val onlineConfig = detectOnlineModelConfig(modelDir)
+                if (onlineConfig != null) {
+                    val recognizer = OnlineRecognizer(assetManager = null, config = onlineConfig)
+                    Log.i(TAG, "Loaded online model: $modelName")
+                    return LocalTranscriber(onlineRecognizer = recognizer)
+                }
+
+                val offlineConfig = detectModelConfig(modelDir)
+                if (offlineConfig != null) {
+                    val recognizer = OfflineRecognizer(assetManager = null, config = offlineConfig)
+                    Log.i(TAG, "Loaded offline model: $modelName")
+                    return LocalTranscriber(offlineRecognizer = recognizer)
+                }
+
+                Log.e(TAG, "Could not detect model type in $modelDir")
+                null
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load model: ${e.message}")
                 null
             }
+        }
+
+        private fun detectOnlineModelConfig(dir: File): OnlineRecognizerConfig? {
+            val p = dir.absolutePath
+            val tokens = "$p/tokens.txt"
+            if (!File(tokens).exists()) return null
+
+            val encoder = findFile(p, "encoder")
+            val decoder = findFile(p, "decoder")
+            val joiner = findFile(p, "joiner")
+            
+            val bpe = File(p, "bpe.model")
+            
+            // Check for streaming zipformer which has encoder, decoder, joiner but is meant for online
+            // Usually identified by the folder name having 'streaming' or similar
+            if (encoder != null && decoder != null && joiner != null && (p.contains("streaming") || p.contains("online"))) {
+                return OnlineRecognizerConfig(
+                    modelConfig = OnlineModelConfig(
+                        transducer = OnlineTransducerModelConfig(
+                            encoder = encoder,
+                            decoder = decoder,
+                            joiner = joiner,
+                        ),
+                        tokens = tokens,
+                        bpeVocab = if (bpe.exists()) bpe.absolutePath else "",
+                        numThreads = 2,
+                        modelType = "",
+                    )
+                )
+            }
+            return null
         }
 
         private fun detectModelConfig(dir: File): OfflineRecognizerConfig? {

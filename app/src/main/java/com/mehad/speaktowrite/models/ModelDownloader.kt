@@ -21,7 +21,8 @@ val MODEL_CATALOG = listOf(
     Model("Parakeet 110M", "sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8", 100),
     Model("Whisper Base", "sherpa-onnx-whisper-base.en", 199),
     Model("Parakeet 0.6B", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8", 465),
-    Model("Moonshine Tiny", "sherpa-onnx-moonshine-tiny-en-int8", 103)
+    Model("Moonshine Tiny", "sherpa-onnx-moonshine-tiny-en-int8", 103),
+    Model("Zipformer Bangla", "sherpa-onnx-streaming-zipformer-bn-vosk-2026-02-09", 83)
 )
 
 sealed class DownloadState {
