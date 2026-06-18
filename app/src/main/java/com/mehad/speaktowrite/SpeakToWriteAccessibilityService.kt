@@ -34,6 +34,7 @@ import com.mehad.speaktowrite.models.TranscriberManager
 import java.io.ByteArrayOutputStream
 import kotlin.concurrent.thread
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 class SpeakToWriteAccessibilityService : AccessibilityService() {
     companion object {
@@ -295,7 +296,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             return
         }
 
-        thread {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val floatArray = FloatArray(pcm.size / 2)
             var i = 0
             while (i < pcm.size - 1) {
@@ -304,13 +305,28 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 i += 2
             }
             
-            val text = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
+            val rawText = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
+            
+            var finalText = rawText
+            if (finalText.isNotBlank()) {
+                val settings = com.mehad.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
+                if (settings.cleanupEnabled && settings.apiKey.isNotBlank()) {
+                    val promptText = settings.prompts.find { it.id == settings.selectedPromptId }?.content ?: ""
+                    val cleaned = com.mehad.speaktowrite.models.PostProcessor.process(
+                        text = rawText,
+                        prompt = promptText,
+                        apiKey = settings.apiKey,
+                        model = settings.selectedAiModel
+                    )
+                    if (cleaned != null) finalText = cleaned
+                }
+            }
             
             handler.post {
-                if (text.isBlank()) {
+                if (finalText.isBlank()) {
                     toast("No audio to transcribe")
                 } else {
-                    injectText(text)
+                    injectText(finalText)
                 }
                 resetState()
             }

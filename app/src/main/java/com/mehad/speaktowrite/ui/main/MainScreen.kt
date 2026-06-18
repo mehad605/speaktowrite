@@ -95,18 +95,51 @@ fun MainScreen(modifier: Modifier = Modifier) {
     val isLoadingModel by TranscriberManager.isLoading.collectAsState()
     val selectedLocalModel by TranscriberManager.currentModel.collectAsState()
 
-    var apiKey by remember { mutableStateOf("") }
+    val settingsManager = remember { com.mehad.speaktowrite.models.SettingsManager(context) }
+    var apiKey by remember { mutableStateOf(settingsManager.apiKey) }
     var expandedModelDropdown by remember { mutableStateOf(false) }
-    var selectedAiModel by remember { mutableStateOf("gemini-1.5-flash") }
-    val aiModels = listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")
+    var selectedAiModel by remember { mutableStateOf(settingsManager.selectedAiModel) }
+    var cleanupEnabled by remember { mutableStateOf(settingsManager.cleanupEnabled) }
+    
+    var aiModels by remember { mutableStateOf(listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")) }
+    var isCheckingKey by remember { mutableStateOf(false) }
+    var isValidKey by remember { mutableStateOf<Boolean?>(null) }
+    
+    fun verifyKeyAndFetchModels(key: String) {
+        if (key.isBlank()) {
+            isValidKey = null
+            return
+        }
+        isCheckingKey = true
+        coroutineScope.launch {
+            val result = com.mehad.speaktowrite.models.GeminiClient.getAvailableModels(key)
+            if (result.isSuccess) {
+                isValidKey = true
+                val models = result.getOrNull()
+                if (!models.isNullOrEmpty()) {
+                    aiModels = models
+                    if (!models.contains(selectedAiModel)) {
+                        selectedAiModel = models.first()
+                        settingsManager.selectedAiModel = selectedAiModel
+                    }
+                }
+            } else {
+                isValidKey = false
+            }
+            isCheckingKey = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (apiKey.isNotBlank()) {
+            verifyKeyAndFetchModels(apiKey)
+        }
+    }
 
     val prompts = remember {
-        mutableStateListOf(
-            PromptPreset("1", "Dev cleanup", "Best for coding and CLI"),
-            PromptPreset("2", "Simple cleanup", "Fix grammar and punctuation")
-        )
+        mutableStateListOf(*settingsManager.prompts.toTypedArray())
     }
-    var selectedPromptId by remember { mutableStateOf(prompts.first().id) }
+    var selectedPromptId by remember { mutableStateOf(settingsManager.selectedPromptId) }
 
     var showPromptDialog by remember { mutableStateOf(false) }
     var editingPrompt by remember { mutableStateOf<PromptPreset?>(null) }
@@ -190,16 +223,42 @@ fun MainScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(24.dp))
             
             // Cleanup Section
-            SectionTitle("Cleanup", Modifier.padding(horizontal = 24.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SectionTitle("Cleanup", Modifier)
+                androidx.compose.material3.Switch(
+                    checked = cleanupEnabled,
+                    onCheckedChange = { 
+                        cleanupEnabled = it
+                        settingsManager.cleanupEnabled = it
+                    },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = Color.Black,
+                        checkedTrackColor = SolidGreen,
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = DarkSurface
+                    )
+                )
+            }
             SolidCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Google AI Studio API Key", color = SolidGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = apiKey,
-                        onValueChange = { apiKey = it },
+                        onValueChange = { 
+                            apiKey = it
+                            settingsManager.apiKey = it
+                            if (it.isBlank()) isValidKey = null 
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Enter API Key", color = Color.Gray) },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SolidGreen,
                             unfocusedBorderColor = SolidGreen.copy(alpha = 0.5f),
@@ -207,11 +266,37 @@ fun MainScreen(modifier: Modifier = Modifier) {
                             unfocusedTextColor = Color.White,
                             cursorColor = SolidGreen
                         ),
-                        singleLine = true
+                        singleLine = true,
+                        trailingIcon = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isValidKey == true) {
+                                    Icon(Icons.Default.Check, contentDescription = "Valid Key", tint = SolidGreen)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                } else if (isValidKey == false) {
+                                    Icon(Icons.Default.Warning, contentDescription = "Invalid Key", tint = Color(0xFFFF3B30))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                }
+                            }
+                        }
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Select AI Model", color = SolidGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Select AI Model", color = SolidGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isCheckingKey) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SolidGreen, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            IconButton(onClick = { verifyKeyAndFetchModels(apiKey) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh Models", tint = SolidGreen)
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     ExposedDropdownMenuBox(
@@ -245,6 +330,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                                     text = { Text(selectionOption, color = Color.White) },
                                     onClick = {
                                         selectedAiModel = selectionOption
+                                        settingsManager.selectedAiModel = selectionOption
                                         expandedModelDropdown = false
                                     }
                                 )
@@ -281,7 +367,10 @@ fun MainScreen(modifier: Modifier = Modifier) {
                         ) {
                             RadioButton(
                                 selected = selectedPromptId == prompt.id,
-                                onClick = { selectedPromptId = prompt.id },
+                                onClick = { 
+                                    selectedPromptId = prompt.id
+                                    settingsManager.selectedPromptId = prompt.id
+                                },
                                 colors = RadioButtonDefaults.colors(selectedColor = SolidGreen, unselectedColor = SolidGreen.copy(alpha = 0.5f))
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -385,6 +474,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                                         prompts[idx] = prompts[idx].copy(title = pTitle, content = pContent)
                                     }
                                 }
+                                settingsManager.prompts = prompts.toList()
                                 showPromptDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = SolidGreen, contentColor = Color.Black)
