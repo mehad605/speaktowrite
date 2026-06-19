@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -21,35 +22,50 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
-import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import android.os.Bundle
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.view.accessibility.AccessibilityNodeInfo
 import com.mehad.speaktowrite.models.TranscriberManager
 import java.io.ByteArrayOutputStream
 import kotlin.concurrent.thread
 import kotlin.math.abs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class SpeakToWriteAccessibilityService : AccessibilityService() {
+
     companion object {
         private const val TAG = "SpeakToWrite"
         private const val SAMPLE_RATE = 16000
-        private const val BTN_DP = 48
-        private const val PAD_DP = 12
+
+        // Two-zone button dimensions
+        private const val MIC_DP = 48
+        private const val ARROW_DP = 28
+        private const val PAD_DP = 10
         private const val MARGIN_DP = 16
         private const val TAP_THRESHOLD_DP = 10
 
-        // Aurora-matched overlay palette — dark emerald glass for idle,
-        // recording-red stays universal for "recording", calm teal for busy.
+        // Aurora overlay palette
         private const val COLOR_IDLE = 0xDD0E1F1C.toInt()
         private const val COLOR_RECORDING = 0xDDEF4444.toInt()
         private const val COLOR_BUSY = 0xDD14302C.toInt()
+        private const val COLOR_LOADING = 0xDD2C3030.toInt()
+
+        // Dropdown panel colors
+        private const val DROPDOWN_BG = 0xEE12181A.toInt()
+        private const val DROPDOWN_BORDER = 0x442C373A.toInt()
+        private const val DROPDOWN_ITEM_BG = 0xFF1A2123.toInt()
+        private const val DROPDOWN_ITEM_SELECTED_BG = 0xFF0E1F1C.toInt()
+        private const val DROPDOWN_TEXT = 0xFFEAF2F0.toInt()
+        private const val DROPDOWN_ACCENT = 0xFF22C28E.toInt()
 
         var instance: SpeakToWriteAccessibilityService? = null
             private set
@@ -74,63 +90,144 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         }
     }
 
-    private enum class State { IDLE, RECORDING, TRANSCRIBING }
+    // ── States ──────────────────────────────────────────────────────────
+    // IDLE         → mic green, arrow visible, can record or open dropdown
+    // RECORDING    → mic red+pulse, arrow hidden, tap stops recording
+    // TRANSCRIBING → mic teal, arrow hidden, tap shows "wait" toast
+    // LOADING_MODEL→ mic grey, arrow hidden, tap shows "loading" toast
+    private enum class State { IDLE, RECORDING, TRANSCRIBING, LOADING_MODEL }
     private var state = State.IDLE
 
-    private var overlayView: FrameLayout? = null
-    private var button: ImageView? = null
+    // ── Views ───────────────────────────────────────────────────────────
+    private var overlayView: LinearLayout? = null
+    private var micButton: ImageView? = null
+    private var arrowButton: ImageView? = null
+    private var dividerView: View? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+    private var dropdownView: LinearLayout? = null
+    private var isDropdownOpen = false
 
+    // ── Audio ───────────────────────────────────────────────────────────
     private var audioRecord: AudioRecord? = null
     private var pcmStream: ByteArrayOutputStream? = null
     private val handler = Handler(Looper.getMainLooper())
 
+    // ── Model loading observer ──────────────────────────────────────────
+    private var observeJob: Job? = null
+
+    // ── Helpers ──────────────────────────────────────────────────────────
     private val dp get() = resources.displayMetrics.density
     private val screenW get() = resources.displayMetrics.widthPixels
     private val screenH get() = resources.displayMetrics.heightPixels
+
+    // ====================================================================
+    // Lifecycle
+    // ====================================================================
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         TranscriberManager.init(this)
         showOverlay()
+        observeModelLoading()
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+    override fun onDestroy() {
+        instance = null
+        observeJob?.cancel()
+        removeOverlay()
+        removeDropdown()
+        super.onDestroy()
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onInterrupt() {}
+
+    // ====================================================================
+    // Model-loading state observer
+    // ====================================================================
+
+    private fun observeModelLoading() {
+        observeJob = CoroutineScope(Dispatchers.Main).launch {
+            TranscriberManager.isLoading
+                .collect { loading ->
+                    if (loading && state == State.IDLE) {
+                        enterState(State.LOADING_MODEL)
+                    } else if (!loading && state == State.LOADING_MODEL) {
+                        enterState(State.IDLE)
+                    }
+                }
+        }
+    }
+
+    // ====================================================================
+    // Overlay — two-zone button (mic | arrow)
+    // ====================================================================
+
+    @SuppressLint("ClickTouchListener", "ClickableViewAccessibility")
     private fun showOverlay() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
-        val buttonSize = (BTN_DP * dp).toInt()
+        val micSize = (MIC_DP * dp).toInt()
+        val arrowSize = (ARROW_DP * dp).toInt()
         val pad = (PAD_DP * dp).toInt()
         val margin = (MARGIN_DP * dp).toInt()
+        val totalW = micSize + arrowSize
 
-        val img = ImageView(this).apply {
-            setImageResource(R.drawable.ic_mic) 
+        // Mic ImageView
+        val micImg = ImageView(this).apply {
+            setImageResource(R.drawable.ic_mic)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(pad, pad, pad, pad)
-            background = circle(COLOR_IDLE)
-            elevation = 8 * dp 
+            setColorFilter(0xFFFFFFFF.toInt())
         }
 
-        val overlay = FrameLayout(this).apply {
-            addView(img, FrameLayout.LayoutParams(buttonSize, buttonSize, Gravity.CENTER))
+        // Divider (1dp emerald line between mic and arrow)
+        val div = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(0x5522C28E.toInt())
+            }
+            layoutParams = LinearLayout.LayoutParams((1 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
+                .apply { setMargins(0, (12 * dp).toInt(), 0, (12 * dp).toInt()) }
         }
+
+        // Arrow ImageView
+        val arrowImg = ImageView(this).apply {
+            setImageResource(R.drawable.ic_dropdown)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setColorFilter(0xFF22C28E.toInt())
+            setPadding(0, pad, pad, pad)
+        }
+
+        // Root container — pill-shaped
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            elevation = 8 * dp
+            clipChildren = false
+            background = pillBg(COLOR_IDLE)
+        }
+        container.addView(micImg, LinearLayout.LayoutParams(micSize, micSize))
+        container.addView(div)
+        container.addView(arrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
 
         val params = WindowManager.LayoutParams(
-            buttonSize, buttonSize,
+            totalW, micSize,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = screenW - buttonSize - margin
-            y = screenH / 2 - buttonSize / 2
+            x = screenW - totalW - margin
+            y = screenH / 2 - micSize / 2
         }
 
+        // Touch handling — zone-aware tap vs drag
         var startX = 0; var startY = 0
         var touchX = 0f; var touchY = 0f
         var isDragging = false
 
-        overlay.setOnTouchListener { v, ev ->
+        container.setOnTouchListener { v, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = params.x
@@ -154,12 +251,17 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging && abs(ev.rawX - touchX) < TAP_THRESHOLD_DP * dp && abs(ev.rawY - touchY) < TAP_THRESHOLD_DP * dp) {
-                        onTap()
+                    if (!isDragging &&
+                        abs(ev.rawX - touchX) < TAP_THRESHOLD_DP * dp &&
+                        abs(ev.rawY - touchY) < TAP_THRESHOLD_DP * dp
+                    ) {
+                        // Determine zone from local X
+                        val isMicZone = ev.x <= micSize
+                        onZoneTap(isMicZone)
                     } else {
-                        // Animate snap to edge
-                        val targetX = if (params.x + buttonSize / 2 > screenW / 2) {
-                            screenW - buttonSize - margin
+                        // Snap to edge
+                        val targetX = if (params.x + totalW / 2 > screenW / 2) {
+                            screenW - totalW - margin
                         } else {
                             margin
                         }
@@ -171,95 +273,268 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             }
         }
 
-        wm.addView(overlay, params)
-        overlayView = overlay
-        button = img
+        wm.addView(container, params)
+        overlayView = container
+        micButton = micImg
+        arrowButton = arrowImg
+        dividerView = div
         layoutParams = params
-    }
-
-    private fun animateSnap(fromX: Int, toX: Int, params: WindowManager.LayoutParams, wm: WindowManager, view: View) {
-        val animator = ValueAnimator.ofInt(fromX, toX)
-        animator.duration = 250
-        animator.interpolator = DecelerateInterpolator()
-        animator.addUpdateListener { anim ->
-            params.x = anim.animatedValue as Int
-            try {
-                wm.updateViewLayout(view, params)
-            } catch (e: Exception) {
-                // View might be detached
-            }
-        }
-        animator.start()
     }
 
     private fun removeOverlay() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
         overlayView?.let {
             try { wm.removeView(it) } catch (_: Exception) {}
-            overlayView = null
         }
-        button = null
+        overlayView = null
+        micButton = null
+        arrowButton = null
+        dividerView = null
         layoutParams = null
     }
 
-    private fun circle(color: Int) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(color)
-    }
+    // ====================================================================
+    // Dropdown panel
+    // ====================================================================
 
-    private fun circleWithRing(color: Int, ringColor: Int, strokeWidthPx: Int) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(color)
-        setStroke(strokeWidthPx, ringColor)
-    }
+    @SuppressLint("ClickableViewAccessibility")
+    private fun showDropdown() {
+        if (isDropdownOpen) return
+        isDropdownOpen = true
 
-    private fun setAppearance(color: Int) {
-        handler.post {
-            button?.background = when (color) {
-                COLOR_IDLE -> circleWithRing(color, 0xFF22C28E.toInt(), (2 * dp).toInt())
-                else -> circle(color)
+        val models = TranscriberManager.getInstalledModels(this)
+        if (models.isEmpty()) {
+            toast("No models installed — download one in the app")
+            isDropdownOpen = false
+            return
+        }
+
+        val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        val lp = layoutParams ?: return
+
+        val itemH = (44 * dp).toInt()
+        val pad = (8 * dp).toInt()
+        val radius = (16 * dp).toInt()
+        val maxVisible = 8
+
+        val visibleCount = models.size.coerceAtMost(maxVisible)
+        val dropdownH = visibleCount * itemH + pad * 2
+
+        // Build dropdown LinearLayout
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadii = floatArrayOf(
+                    radius.toFloat(), radius.toFloat(), radius.toFloat(), radius.toFloat(),
+                    radius.toFloat(), radius.toFloat(), radius.toFloat(), radius.toFloat(),
+                )
+                setColor(DROPDOWN_BG)
+                setStroke((1 * dp).toInt(), DROPDOWN_BORDER)
+            }
+            setPadding(pad, pad, pad, pad)
+            elevation = 12 * dp
+        }
+
+        val currentModel = TranscriberManager.currentModel.value
+
+        models.forEachIndexed { index, (archive, displayName) ->
+            val isSelected = archive == currentModel
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    val r = 8 * dp
+                    cornerRadii = floatArrayOf(r, r, r, r, r, r, r, r)
+                    setColor(if (isSelected) DROPDOWN_ITEM_SELECTED_BG else DROPDOWN_ITEM_BG)
+                }
+            }
+
+            val label = TextView(this).apply {
+                text = displayName
+                setTextColor(if (isSelected) DROPDOWN_ACCENT else DROPDOWN_TEXT)
+                setTypeface(null, if (isSelected) Typeface.BOLD else Typeface.NORMAL)
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            row.addView(label)
+
+            if (isSelected) {
+                val check = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_check)
+                    setColorFilter(DROPDOWN_ACCENT)
+                    val s = (14 * dp).toInt()
+                    layoutParams = LinearLayout.LayoutParams(s, s)
+                }
+                row.addView(check)
+            }
+
+            row.setOnClickListener { onModelSelected(archive) }
+
+            container.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, itemH))
+
+            // Separator between items (not after last visible)
+            if (index < models.size - 1 && index < maxVisible - 1) {
+                val sep = View(this).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(0xFF2C373A.toInt())
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
+                    ).apply { setMargins((8 * dp).toInt(), 0, (8 * dp).toInt(), 0) }
+                }
+                container.addView(sep)
             }
         }
-    }
 
-    private fun startPulse() {
-        button?.let {
-            it.animate().alpha(0.5f).setDuration(600).withEndAction {
-                it.animate().alpha(1f).setDuration(600).withEndAction {
-                    if (state == State.RECORDING) startPulse()
-                }.start()
-            }.start()
+        // Position above the button, or below if near top of screen
+        val btnCenterY = lp.y + lp.height / 2
+        val showAbove = btnCenterY > dropdownH + (16 * dp)
+
+        val dropdownParams = WindowManager.LayoutParams(
+            (200 * dp).toInt(),
+            dropdownH,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = lp.x + lp.width / 2 - width / 2
+            y = if (showAbove) lp.y - dropdownH - (8 * dp).toInt()
+                 else lp.y + lp.height + (8 * dp).toInt()
         }
+
+        // Animate in
+        container.alpha = 0f
+        container.scaleX = 0.92f
+        container.scaleY = 0.92f
+        container.animate()
+            .alpha(1f).scaleX(1f).scaleY(1f)
+            .setDuration(180)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        wm.addView(container, dropdownParams)
+        dropdownView = container
+
+        // Rotate arrow to point up
+        arrowButton?.animate()?.rotation(180f)?.setDuration(180)?.start()
     }
 
-    private fun stopPulse() {
-        button?.animate()?.cancel()
-        button?.alpha = 1f
+    private fun removeDropdown() {
+        if (!isDropdownOpen) return
+        isDropdownOpen = false
+
+        val view = dropdownView ?: return
+        view.animate()
+            .alpha(0f).scaleX(0.92f).scaleY(0.92f)
+            .setDuration(120)
+            .withEndAction {
+                try {
+                    val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+                    wm.removeView(view)
+                } catch (_: Exception) {}
+                dropdownView = null
+            }
+            .start()
+
+        // Rotate arrow back to down
+        arrowButton?.animate()?.rotation(0f)?.setDuration(120)?.start()
     }
 
-    private fun onTap() {
-        when (state) {
-            State.IDLE -> startRecording()
-            State.RECORDING -> stopAndTranscribe()
+    private fun onModelSelected(archive: String) {
+        removeDropdown()
+
+        // If same model is already loaded, nothing to do
+        if (archive == TranscriberManager.currentModel.value && TranscriberManager.transcriber != null) return
+
+        // Load the new model — the observer will catch isLoading and enter LOADING_MODEL
+        TranscriberManager.loadModel(this, archive)
+    }
+
+    // ====================================================================
+    // State machine
+    // ====================================================================
+
+    private fun enterState(newState: State) {
+        state = newState
+        when (newState) {
+            State.IDLE -> {
+                setButtonBg(pillBg(COLOR_IDLE))
+                micButton?.setColorFilter(0xFFFFFFFF.toInt())
+                micButton?.alpha = 1f
+                dividerView?.visibility = View.VISIBLE
+                arrowButton?.visibility = View.VISIBLE
+            }
+            State.RECORDING -> {
+                setButtonBg(pillBg(COLOR_RECORDING))
+                micButton?.setColorFilter(0xFFFFFFFF.toInt())
+                micButton?.alpha = 1f
+                dividerView?.visibility = View.GONE
+                arrowButton?.visibility = View.GONE
+                startPulse()
+            }
             State.TRANSCRIBING -> {
-                toast("Please wait, transcribing...")
+                stopPulse()
+                setButtonBg(pillBg(COLOR_BUSY))
+                micButton?.setColorFilter(0xFFFFFFFF.toInt())
+                micButton?.alpha = 1f
+                dividerView?.visibility = View.GONE
+                arrowButton?.visibility = View.GONE
+            }
+            State.LOADING_MODEL -> {
+                setButtonBg(pillBg(COLOR_LOADING))
+                micButton?.setColorFilter(0xFF9DB0AC.toInt()) // dimmed
+                dividerView?.visibility = View.GONE
+                arrowButton?.visibility = View.GONE
             }
         }
     }
+
+    private fun onZoneTap(isMicZone: Boolean) {
+        when (state) {
+            State.IDLE -> {
+                if (isMicZone) startRecording()
+                else showDropdown()
+            }
+            State.RECORDING -> {
+                // Any tap stops recording (arrow is hidden, so all taps land on mic)
+                stopAndTranscribe()
+            }
+            State.TRANSCRIBING -> {
+                toast("Transcribing… please wait")
+            }
+            State.LOADING_MODEL -> {
+                toast("Model is loading into memory — please wait")
+            }
+        }
+    }
+
+    private fun resetState() {
+        enterState(State.IDLE)
+    }
+
+    // ====================================================================
+    // Recording
+    // ====================================================================
 
     private fun startRecording() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            toast("Please grant audio permission in the app first")
+            toast("Grant microphone permission in the app first")
             return
         }
-        
+
         if (TranscriberManager.isLoading.value) {
-            toast("Model is loading, please wait...")
+            toast("Model is loading, please wait…")
             return
         }
-        
+
         if (TranscriberManager.transcriber == null) {
-            toast("Please select a model in the app first")
+            toast("No model loaded — select one from the dropdown")
             return
         }
 
@@ -278,9 +553,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         pcmStream = ByteArrayOutputStream()
         audioRecord?.startRecording()
-        state = State.RECORDING
-        setAppearance(COLOR_RECORDING)
-        startPulse()
+        enterState(State.RECORDING)
 
         thread {
             val buf = ByteArray(bufSize)
@@ -292,9 +565,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     }
 
     private fun stopAndTranscribe() {
-        state = State.TRANSCRIBING
-        stopPulse()
-        setAppearance(COLOR_BUSY)
+        enterState(State.TRANSCRIBING)
 
         audioRecord?.stop()
         audioRecord?.release()
@@ -309,7 +580,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             return
         }
 
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             val floatArray = FloatArray(pcm.size / 2)
             var i = 0
             while (i < pcm.size - 1) {
@@ -317,9 +588,9 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 floatArray[i / 2] = sample.toShort().toFloat() / 32768f
                 i += 2
             }
-            
+
             val rawText = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
-            
+
             var finalText = rawText
             if (finalText.isNotBlank()) {
                 val settings = com.mehad.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
@@ -334,10 +605,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                     if (cleaned != null) finalText = cleaned
                 }
             }
-            
+
             handler.post {
                 if (finalText.isBlank()) {
-                    toast("No audio to transcribe")
+                    toast("No speech detected")
                 } else {
                     injectText(finalText)
                 }
@@ -346,23 +617,26 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         }
     }
 
+    // ====================================================================
+    // Text injection
+    // ====================================================================
+
     private fun injectText(text: String) {
         val root = rootInActiveWindow
         var targetNode: AccessibilityNodeInfo? = null
-        
+
         if (root != null) {
             targetNode = findFocusedNode(root)
         }
-        
+
         var success = false
         if (targetNode != null && targetNode.isEditable) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("SpeakToWrite", text)
             clipboard.setPrimaryClip(clip)
-            
             success = targetNode.performAction(AccessibilityNodeInfo.ACTION_PASTE)
         }
-        
+
         if (!success) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("SpeakToWrite", text)
@@ -381,21 +655,54 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         return null
     }
 
-    private fun resetState() {
-        state = State.IDLE
-        setAppearance(COLOR_IDLE)
+    // ====================================================================
+    // Animations & drawables
+    // ====================================================================
+
+    private fun animateSnap(fromX: Int, toX: Int, params: WindowManager.LayoutParams, wm: WindowManager, view: View) {
+        val animator = ValueAnimator.ofInt(fromX, toX)
+        animator.duration = 250
+        animator.interpolator = DecelerateInterpolator()
+        animator.addUpdateListener { anim ->
+            params.x = anim.animatedValue as Int
+            try { wm.updateViewLayout(view, params) } catch (_: Exception) {}
+        }
+        animator.start()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    private fun startPulse() {
+        micButton?.let {
+            it.animate().alpha(0.5f).setDuration(600).withEndAction {
+                it.animate().alpha(1f).setDuration(600).withEndAction {
+                    if (state == State.RECORDING) startPulse()
+                }.start()
+            }.start()
+        }
     }
 
-    override fun onInterrupt() {
+    private fun stopPulse() {
+        micButton?.animate()?.cancel()
+        micButton?.alpha = 1f
     }
 
-    override fun onDestroy() {
-        instance = null
-        removeOverlay()
-        super.onDestroy()
+    /** Pill-shaped background with optional emerald ring for idle. */
+    private fun pillBg(color: Int): GradientDrawable {
+        val radius = 24 * dp
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(
+                radius, radius, radius, radius,
+                radius, radius, radius, radius,
+            )
+            setColor(color)
+            if (color == COLOR_IDLE) {
+                setStroke((1.5 * dp).toInt(), 0xFF22C28E.toInt())
+            }
+        }
+    }
+
+    private fun setButtonBg(drawable: GradientDrawable) {
+        handler.post { overlayView?.background = drawable }
     }
 
     private fun toast(msg: String) {
