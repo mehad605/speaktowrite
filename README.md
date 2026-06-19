@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../releases"><img src="https://img.shields.io/badge/Release-Latest-22C28E?style=flat-for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/mehad605/speaktowrite/releases"><img src="https://img.shields.io/badge/Release-Latest-22C28E?style=flat-for-the-badge" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/Platform-Android-38EF7D?style=flat-for-the-badge&logo=android&logoColor=white" alt="Platform" />
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-0E1F1C?style=flat-for-the-badge&labelColor=22C28E" alt="Privacy Status" />
 </p>
@@ -39,7 +39,7 @@ Using the state-of-the-art ONNX runtime and offline models, Speak to Write runs 
 
 Get the pre-compiled application package directly from our GitHub Releases portal:
 
-➡️ **[Download the Latest APK on GitHub Releases](../releases)**
+➡️ **[Download the Latest APK on GitHub Releases](https://github.com/mehad605/speaktowrite/releases)**
 
 ### How to Get Started:
 1. Download and install the `speak2write` APK.
