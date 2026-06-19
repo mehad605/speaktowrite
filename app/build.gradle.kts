@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.mehad.speaktowrite"
+    namespace = "com.mhm.speaktowrite"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.mehad.speaktowrite"
+        applicationId = "com.mhm.speaktowrite"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
