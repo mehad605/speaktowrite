@@ -45,9 +45,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         private const val MARGIN_DP = 16
         private const val TAP_THRESHOLD_DP = 10
 
-        private const val COLOR_IDLE = 0xDD1C1C1E.toInt()
+        // Aurora-matched overlay palette — dark emerald glass for idle,
+        // recording-red stays universal for "recording", calm teal for busy.
+        private const val COLOR_IDLE = 0xDD0E1F1C.toInt()
         private const val COLOR_RECORDING = 0xDDEF4444.toInt()
-        private const val COLOR_BUSY = 0xDD6B6B6B.toInt()
+        private const val COLOR_BUSY = 0xDD14302C.toInt()
 
         var instance: SpeakToWriteAccessibilityService? = null
             private set
@@ -205,8 +207,19 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         setColor(color)
     }
 
+    private fun circleWithRing(color: Int, ringColor: Int, strokeWidthPx: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(color)
+        setStroke(strokeWidthPx, ringColor)
+    }
+
     private fun setAppearance(color: Int) {
-        handler.post { button?.background = circle(color) }
+        handler.post {
+            button?.background = when (color) {
+                COLOR_IDLE -> circleWithRing(color, 0xFF22C28E.toInt(), (2 * dp).toInt())
+                else -> circle(color)
+            }
+        }
     }
 
     private fun startPulse() {

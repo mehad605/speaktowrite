@@ -1,50 +1,45 @@
 package com.mehad.speaktowrite.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
+/**
+ * Aurora is always dark — the gradient accents only sing against a deep canvas,
+ * and "private, local voice dictation" should feel calm and low-light. Dynamic
+ * color is intentionally disabled so the brand identity stays consistent.
+ */
+private val Ink = androidx.compose.ui.graphics.Color(0xFF0A0A0A)
 
-private val LightColorScheme =
-  lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-  )
+private val AuroraColorScheme =
+    darkColorScheme(
+        primary = Emerald,
+        onPrimary = Ink,
+        primaryContainer = Emerald.copy(alpha = 0.16f),
+        onPrimaryContainer = EmeraldBright,
+        secondary = Teal,
+        onSecondary = Ink,
+        tertiary = TealDeep,
+        background = AuroraBackground,
+        onBackground = TextPrimary,
+        surface = AuroraSurface,
+        onSurface = TextPrimary,
+        surfaceVariant = AuroraSurfaceHigh,
+        onSurfaceVariant = TextSecondary,
+        surfaceContainer = AuroraSurface,
+        surfaceContainerHigh = AuroraSurfaceHigh,
+        surfaceContainerHighest = AuroraSurfaceHighest,
+        outline = AuroraBorder,
+        outlineVariant = AuroraBorderStrong,
+        error = AuroraError,
+        onError = Ink,
+    )
 
 @Composable
-fun SpeakToWriteTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
-  dynamicColor: Boolean = true,
-  content: @Composable () -> Unit,
-) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
-    }
-
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+fun SpeakToWriteTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = AuroraColorScheme,
+        typography = AuroraTypography,
+        content = content,
+    )
 }

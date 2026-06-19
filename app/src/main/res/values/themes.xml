@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.SpeakToWrite" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Aurora launch theme: dark canvas so the cold-start window matches the
+         Compose UI instead of flashing white. Parented to a no-action-bar
+         Material3 base. -->
+    <style name="Theme.SpeakToWrite" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/aurora_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
 </resources>
