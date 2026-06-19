@@ -19,6 +19,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +79,9 @@ fun AiPolishSection(
     onSelectPrompt: (String) -> Unit,
     onAddPrompt: () -> Unit,
     onEditPrompt: (PromptPreset) -> Unit,
+    onDeletePrompt: (PromptPreset) -> Unit,
+    onImportConfig: () -> Unit,
+    onExportConfig: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -226,9 +233,54 @@ fun AiPolishSection(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    IconButton(onClick = { onEditPrompt(prompt) }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit prompt", tint = Emerald)
+                    Row {
+                        IconButton(onClick = { onEditPrompt(prompt) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit prompt", tint = Emerald)
+                        }
+                        IconButton(onClick = { onDeletePrompt(prompt) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete prompt", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
+                }
+            }
+        }
+
+        AuroraDivider()
+
+        // Configuration actions (Export / Import)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Configuration",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onImportConfig) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Import",
+                        tint = Emerald,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Import", color = Emerald, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onExportConfig) {
+                    Icon(
+                        imageVector = Icons.Default.Upload,
+                        contentDescription = "Export",
+                        tint = Emerald,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Export", color = Emerald, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

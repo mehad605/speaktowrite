@@ -22,6 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -172,6 +175,119 @@ fun PromptEditorDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Spacer(Modifier.width(8.dp))
                     BrandButton(text = "Save", enabled = canSave, onClick = { onSave(title, content) })
+                }
+            }
+        }
+    }
+}
+
+/** Confirm deletion dialog. */
+@Composable
+fun DeletePromptConfirmDialog(
+    promptTitle: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Delete Prompt",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Are you sure you want to delete the prompt \"$promptTitle\"? This cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Export configuration with option to toggle API key. */
+@Composable
+fun ExportConfigDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (includeApiKey: Boolean) -> Unit
+) {
+    var includeApiKey by remember { mutableStateOf(true) }
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)),
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Export Configuration",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Emerald,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Export your custom prompts and application configuration.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = includeApiKey,
+                        onCheckedChange = { includeApiKey = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Emerald,
+                            checkmarkColor = MaterialTheme.colorScheme.background
+                        )
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            "Include API Key",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Your Google AI Studio API key will be saved in the export.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    BrandButton(text = "Export", onClick = { onConfirm(includeApiKey) })
                 }
             }
         }

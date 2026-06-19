@@ -9,14 +9,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.AccessibilityNew
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.mehad.speaktowrite.theme.AuroraError
 import com.mehad.speaktowrite.theme.AuroraSuccess
+import com.mehad.speaktowrite.theme.Emerald
 import com.mehad.speaktowrite.ui.components.AuroraDivider
 import com.mehad.speaktowrite.ui.components.AuroraRow
+import com.mehad.speaktowrite.ui.components.AuroraSwitch
 import com.mehad.speaktowrite.ui.components.DoneBadge
 import com.mehad.speaktowrite.ui.components.GlassCard
 import com.mehad.speaktowrite.ui.components.SectionEyebrow
@@ -29,6 +32,8 @@ import com.mehad.speaktowrite.ui.components.SectionEyebrow
 fun SetupSection(
     hasAudio: Boolean,
     hasAccessibility: Boolean,
+    showOnLockScreen: Boolean,
+    onShowOnLockScreenToggle: (Boolean) -> Unit,
     onAudioClick: () -> Unit,
     onAccessibilityClick: () -> Unit,
 ) {
@@ -57,6 +62,21 @@ fun SetupSection(
             trailing = { if (hasAccessibility) DoneBadge() },
             onClick = onAccessibilityClick,
             modifier = Modifier.clickable { onAccessibilityClick() },
+        )
+        AuroraDivider()
+        AuroraRow(
+            icon = Icons.Default.Lock,
+            iconTint = Emerald,
+            title = "Show on Lock Screen",
+            subtitle = "Enable overlay when device is locked",
+            trailing = {
+                AuroraSwitch(
+                    checked = showOnLockScreen,
+                    onCheckedChange = onShowOnLockScreenToggle
+                )
+            },
+            onClick = { onShowOnLockScreenToggle(!showOnLockScreen) },
+            modifier = Modifier.clickable { onShowOnLockScreenToggle(!showOnLockScreen) },
         )
     }
     Spacer(Modifier.height(4.dp))

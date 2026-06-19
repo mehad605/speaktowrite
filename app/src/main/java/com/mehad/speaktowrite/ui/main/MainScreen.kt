@@ -62,10 +62,14 @@ import com.mehad.speaktowrite.ui.components.StatusChip
 import com.mehad.speaktowrite.ui.dialogs.HelpDialog
 import com.mehad.speaktowrite.ui.dialogs.LoadingModelDialog
 import com.mehad.speaktowrite.ui.dialogs.PromptEditorDialog
+import com.mehad.speaktowrite.ui.dialogs.DeletePromptConfirmDialog
+import com.mehad.speaktowrite.ui.dialogs.ExportConfigDialog
 import com.mehad.speaktowrite.ui.sections.AiPolishSection
 import com.mehad.speaktowrite.ui.sections.ModelSection
 import com.mehad.speaktowrite.ui.sections.SetupSection
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 data class PromptPreset(
     val id: String,
@@ -117,6 +121,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var apiKey by remember { mutableStateOf(settingsManager.apiKey) }
     var selectedAiModel by remember { mutableStateOf(settingsManager.selectedAiModel) }
     var cleanupEnabled by remember { mutableStateOf(settingsManager.cleanupEnabled) }
+    var showOnLockScreen by remember { mutableStateOf(settingsManager.showOnLockScreen) }
     var aiModels by remember { mutableStateOf(listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")) }
     var isCheckingKey by remember { mutableStateOf(false) }
     var isValidKey by remember { mutableStateOf<Boolean?>(null) }
@@ -156,6 +161,121 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var selectedPromptId by remember { mutableStateOf(settingsManager.selectedPromptId) }
     var showPromptDialog by remember { mutableStateOf(false) }
     var editingPrompt by remember { mutableStateOf<PromptPreset?>(null) }
+
+    // ── Export / Import Config ───────────────────────────────────────────
+    var showExportDialog by remember { mutableStateOf(false) }
+    var shouldExportWithApiKey by remember { mutableStateOf(true) }
+    var showDeletePromptDialog by remember { mutableStateOf(false) }
+    var promptToDelete by remember { mutableStateOf<PromptPreset?>(null) }
+
+    val exportConfigLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        val configObject = org.json.JSONObject()
+                        if (shouldExportWithApiKey) {
+                            configObject.put("api_key", settingsManager.apiKey)
+                        }
+                        
+                        val promptsArray = org.json.JSONArray()
+                        for (p in prompts) {
+                            val obj = org.json.JSONObject()
+                            obj.put("id", p.id)
+                            obj.put("title", p.title)
+                            obj.put("content", p.content)
+                            promptsArray.put(obj)
+                        }
+                        configObject.put("prompts", promptsArray)
+                        
+                        outputStream.write(configObject.toString(2).toByteArray())
+                    }
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Configuration exported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Export failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    val importConfigLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        val jsonString = inputStream.bufferedReader().readText()
+                        
+                        var importedApiKey = ""
+                        val newPrompts = mutableListOf<PromptPreset>()
+                        
+                        try {
+                            val jsonObject = org.json.JSONObject(jsonString)
+                            importedApiKey = jsonObject.optString("api_key", "")
+                            val importedPromptsArray = jsonObject.optJSONArray("prompts")
+                            if (importedPromptsArray != null) {
+                                for (i in 0 until importedPromptsArray.length()) {
+                                    val obj = importedPromptsArray.getJSONObject(i)
+                                    newPrompts.add(
+                                        PromptPreset(
+                                            id = obj.getString("id"),
+                                            title = obj.getString("title"),
+                                            content = obj.getString("content")
+                                        )
+                                    )
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Try parsing as array of prompts directly
+                            val arr = org.json.JSONArray(jsonString)
+                            for (i in 0 until arr.length()) {
+                                val obj = arr.getJSONObject(i)
+                                newPrompts.add(
+                                    PromptPreset(
+                                        id = obj.getString("id"),
+                                        title = obj.getString("title"),
+                                        content = obj.getString("content")
+                                    )
+                                )
+                            }
+                        }
+                        
+                        withContext(Dispatchers.Main) {
+                            if (importedApiKey.isNotBlank()) {
+                                apiKey = importedApiKey
+                                settingsManager.apiKey = importedApiKey
+                                verifyKeyAndFetchModels(importedApiKey)
+                            }
+                            
+                            for (ip in newPrompts) {
+                                val existingIdx = prompts.indexOfFirst { it.id == ip.id }
+                                if (existingIdx != -1) {
+                                    prompts[existingIdx] = ip
+                                } else {
+                                    prompts.add(ip)
+                                }
+                            }
+                            settingsManager.prompts = prompts.toList()
+                            android.widget.Toast.makeText(context, "Configuration imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Import failed: Invalid file format", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
 
     // ── Custom (imported) models ─────────────────────────────────────────
     var customModels by remember { mutableStateOf(emptyList<Model>()) }
@@ -224,6 +344,11 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 SetupSection(
                     hasAudio = hasAudioPermission,
                     hasAccessibility = hasAccessibilityPermission,
+                    showOnLockScreen = showOnLockScreen,
+                    onShowOnLockScreenToggle = {
+                        showOnLockScreen = it
+                        settingsManager.showOnLockScreen = it
+                    },
                     onAudioClick = {
                         if (!hasAudioPermission) audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     },
@@ -298,6 +423,16 @@ fun MainScreen(modifier: Modifier = Modifier) {
                         editingPrompt = it
                         showPromptDialog = true
                     },
+                    onDeletePrompt = {
+                        promptToDelete = it
+                        showDeletePromptDialog = true
+                    },
+                    onImportConfig = {
+                        importConfigLauncher.launch("*/*")
+                    },
+                    onExportConfig = {
+                        showExportDialog = true
+                    },
                 )
 
                 // Footer hint.
@@ -334,6 +469,45 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 settingsManager.prompts = prompts.toList()
                 showPromptDialog = false
             },
+        )
+    }
+
+    if (showDeletePromptDialog && promptToDelete != null) {
+        DeletePromptConfirmDialog(
+            promptTitle = promptToDelete!!.title,
+            onDismiss = {
+                showDeletePromptDialog = false
+                promptToDelete = null
+            },
+            onConfirm = {
+                val p = promptToDelete!!
+                prompts.remove(p)
+                settingsManager.prompts = prompts.toList()
+                if (selectedPromptId == p.id) {
+                    val nextPrompt = prompts.firstOrNull()
+                    selectedPromptId = nextPrompt?.id ?: ""
+                    settingsManager.selectedPromptId = selectedPromptId
+                }
+                if (p.id in listOf("1", "2", "3")) {
+                    val deletedSet = settingsManager.deletedPromptIds.toMutableSet()
+                    deletedSet.add(p.id)
+                    settingsManager.deletedPromptIds = deletedSet
+                }
+                showDeletePromptDialog = false
+                promptToDelete = null
+                android.widget.Toast.makeText(context, "Prompt deleted", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showExportDialog) {
+        ExportConfigDialog(
+            onDismiss = { showExportDialog = false },
+            onConfirm = { includeApiKey ->
+                shouldExportWithApiKey = includeApiKey
+                showExportDialog = false
+                exportConfigLauncher.launch("speak_to_write_config.json")
+            }
         )
     }
 }

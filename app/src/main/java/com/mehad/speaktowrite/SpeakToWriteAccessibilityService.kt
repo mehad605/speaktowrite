@@ -114,6 +114,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
     // ── Model loading observer ──────────────────────────────────────────
     private var observeJob: Job? = null
+    private var lockScreenReceiver: android.content.BroadcastReceiver? = null
+    private var prefListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     // ── Helpers ──────────────────────────────────────────────────────────
     private val dp get() = resources.displayMetrics.density
@@ -130,11 +132,15 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         TranscriberManager.init(this)
         showOverlay()
         observeModelLoading()
+        registerLockScreenReceiver()
+        registerPrefListener()
     }
 
     override fun onDestroy() {
         instance = null
         observeJob?.cancel()
+        unregisterLockScreenReceiver()
+        unregisterPrefListener()
         removeOverlay()
         removeDropdown()
         super.onDestroy()
@@ -271,6 +277,12 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 }
                 else -> false
             }
+        }
+
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val settings = com.mehad.speaktowrite.models.SettingsManager(this)
+        if (km.isKeyguardLocked && !settings.showOnLockScreen) {
+            container.visibility = View.GONE
         }
 
         wm.addView(container, params)
@@ -707,5 +719,72 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
     private fun toast(msg: String) {
         handler.post { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun registerLockScreenReceiver() {
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_SCREEN_ON)
+            addAction(android.content.Intent.ACTION_SCREEN_OFF)
+            addAction(android.content.Intent.ACTION_USER_PRESENT)
+        }
+        lockScreenReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: android.content.Intent) {
+                val settings = com.mehad.speaktowrite.models.SettingsManager(context)
+                val showOnLock = settings.showOnLockScreen
+                
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                val isLocked = km.isKeyguardLocked
+                
+                if (intent.action == android.content.Intent.ACTION_SCREEN_OFF) {
+                    overlayView?.visibility = View.GONE
+                } else if (intent.action == android.content.Intent.ACTION_SCREEN_ON) {
+                    if (isLocked && !showOnLock) {
+                        overlayView?.visibility = View.GONE
+                    } else {
+                        overlayView?.visibility = View.VISIBLE
+                    }
+                } else if (intent.action == android.content.Intent.ACTION_USER_PRESENT) {
+                    overlayView?.visibility = View.VISIBLE
+                }
+            }
+        }
+        registerReceiver(lockScreenReceiver, filter)
+    }
+
+    private fun unregisterLockScreenReceiver() {
+        lockScreenReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        lockScreenReceiver = null
+    }
+
+    private fun registerPrefListener() {
+        prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "show_on_lock_screen") {
+                val settings = com.mehad.speaktowrite.models.SettingsManager(this)
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                val isLocked = km.isKeyguardLocked
+                
+                if (isLocked && !settings.showOnLockScreen) {
+                    overlayView?.visibility = View.GONE
+                } else {
+                    overlayView?.visibility = View.VISIBLE
+                }
+            }
+        }
+        val prefs = getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+    }
+
+    private fun unregisterPrefListener() {
+        prefListener?.let {
+            val prefs = getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
+            prefs.unregisterOnSharedPreferenceChangeListener(it)
+        }
+        prefListener = null
     }
 }

@@ -21,6 +21,14 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("selected_ai_model", "gemini-1.5-flash") ?: "gemini-1.5-flash"
         set(value) = prefs.edit().putString("selected_ai_model", value).apply()
 
+    var deletedPromptIds: Set<String>
+        get() = prefs.getStringSet("deleted_prompt_ids", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("deleted_prompt_ids", value).apply()
+
+    var showOnLockScreen: Boolean
+        get() = prefs.getBoolean("show_on_lock_screen", false)
+        set(value) = prefs.edit().putBoolean("show_on_lock_screen", value).apply()
+
     var selectedPromptId: String
         get() = prefs.getString("selected_prompt_id", "1") ?: "1"
         set(value) = prefs.edit().putString("selected_prompt_id", value).apply()
@@ -37,7 +45,10 @@ class SettingsManager(context: Context) {
             )
 
             val jsonStr = prefs.getString("prompts", null)
-            if (jsonStr == null) return defaults
+            val deletedIds = deletedPromptIds
+            if (jsonStr == null) {
+                return defaults.filter { it.id !in deletedIds }
+            }
 
             val saved = mutableListOf<PromptPreset>()
             try {
@@ -50,11 +61,11 @@ class SettingsManager(context: Context) {
                 e.printStackTrace()
             }
 
-            // Migration: inject any built-in preset the user is missing.
+            // Migration: inject any built-in preset the user is missing and not deleted.
             val savedIds = saved.map { it.id }.toMutableSet()
             var changed = false
             for (d in defaults) {
-                if (d.id !in savedIds) {
+                if (d.id !in savedIds && d.id !in deletedIds) {
                     saved.add(d)
                     savedIds.add(d.id)
                     changed = true
@@ -65,7 +76,7 @@ class SettingsManager(context: Context) {
                 prefs.edit().putString("prompts", encodePrompts(saved)).apply()
             }
 
-            return if (saved.isEmpty()) defaults else saved
+            return saved
         }
         set(value) {
             prefs.edit().putString("prompts", encodePrompts(value)).apply()
