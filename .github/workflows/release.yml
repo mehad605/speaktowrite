@@ -1,0 +1,72 @@
+name: Build & Release Android App
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_number:
+        description: 'Enter the release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      generate_release_notes:
+        description: 'Generate human-readable, user-friendly release notes automatically?'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  release:
+    name: Build & Release Android App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          # Allows saving and updating caches to optimize build times of subsequent runs
+          cache-read-only: false
+
+      - name: Grant Execute Permissions
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        # CI Build Optimizations:
+        # --build-cache: Instructs Gradle to use its build cache (stored by setup-gradle action)
+        # --no-daemon: Frees up memory on single-use runners immediately upon task completion
+        # --parallel: Compiles separate modules and tasks in parallel
+        # -Dorg.gradle.jvmargs: Sets optimal JVM heap size (4GB heap size is highly suited for GitHub Actions runners)
+        # -Dkotlin.compiler.execution.strategy="in-process": Speeds up Kotlin compilation by avoiding process overhead
+        # -Pandroid.enablePngCrunching=false: Speeds up packaging by skipping PNG optimization for debug builds
+        run: |
+          ./gradlew assembleDebug \
+            --build-cache \
+            --no-daemon \
+            --parallel \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC" \
+            -Dkotlin.compiler.execution.strategy="in-process" \
+            -Pandroid.enablePngCrunching=false
+
+      - name: Rename & Package Artifact
+        run: |
+          mv app/build/outputs/apk/debug/app-debug.apk ./speak2write-${{ github.event.inputs.version_number }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_number }}
+          name: Release ${{ github.event.inputs.version_number }}
+          draft: false
+          prerelease: false
+          generate_release_notes: ${{ github.event.inputs.generate_release_notes }}
+          files: |
+            speak2write-${{ github.event.inputs.version_number }}.apk

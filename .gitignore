@@ -1,15 +1,56 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle files and cache
+.gradle/
+.gradle-user-home/
+.gradle-cache/
+
+# Build outputs
+build/
+**/build/
+*.apk
+*.aar
+*.ap_
+*.dex
+*.class
+
+# Local configuration (e.g. Android SDK path)
 local.properties
+
+# Signatures/Keystores (uncomment if you use local signing files)
+# *.jks
+# *.keystore
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/runConfigurations/
+.idea/shelf/
+.idea/gradle.xml
+
+# OS-generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Mobile tools (captures, lint, profiling)
+captures/
+*.log
+
+# Native build folders
+.externalNativeBuild/
+.cxx/
+ndkBuild/
+
+# Kotlin metadata / compiler cache
+.kotlin/
