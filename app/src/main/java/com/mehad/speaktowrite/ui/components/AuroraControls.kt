@@ -3,6 +3,7 @@ package com.mehad.speaktowrite.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ fun BrandButton(
                 .clip(RoundedCornerShape(14.dp))
                 .background(BrandBrush, alpha = alpha)
                 .border(BorderStroke(1.dp, Emerald.copy(alpha = 0.6f)), RoundedCornerShape(14.dp))
+                .clickable(enabled = enabled) { onClick() }
                 .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

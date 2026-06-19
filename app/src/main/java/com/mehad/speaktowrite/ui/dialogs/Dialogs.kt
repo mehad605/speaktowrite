@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.mehad.speaktowrite.theme.AuroraSurface
@@ -115,6 +119,8 @@ fun PromptEditorDialog(
 ) {
     var title by remember { mutableStateOf(editing?.title ?: "") }
     var content by remember { mutableStateOf(editing?.content ?: "") }
+    // Guard against empty save.
+    val canSave = title.isNotBlank() && content.isNotBlank()
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -139,21 +145,33 @@ fun PromptEditorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors(),
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
+                // Multi-line content field — tall and internally scrollable so
+                // longer prompts can be read and edited comfortably.
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
                     label = { Text("Content") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp),
+                        .heightIn(min = 180.dp, max = 320.dp)
+                        .verticalScroll(rememberScrollState()),
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     colors = fieldColors(),
                 )
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "${content.length} characters",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                )
+                Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Spacer(Modifier.width(8.dp))
-                    BrandButton(text = "Save", onClick = { onSave(title, content) })
+                    BrandButton(text = "Save", enabled = canSave, onClick = { onSave(title, content) })
                 }
             }
         }
