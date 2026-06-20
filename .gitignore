@@ -16,8 +16,9 @@ build/
 local.properties
 
 # Signatures/Keystores (uncomment if you use local signing files)
-# *.jks
-# *.keystore
+*.jks
+*.keystore
+keystore.properties
 
 # Android Studio / IntelliJ IDEA
 .idea/

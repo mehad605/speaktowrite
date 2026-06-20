@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
@@ -7,12 +10,49 @@ plugins {
 android {
     namespace = "com.mhm.speaktowrite"
     compileSdk = 36
+
+    // ── Signing Configuration (Industry Standard) ──
+    val keystorePropertiesFile = rootProject.file("app/keystore.properties")
+    val keystoreProperties = Properties()
+    var hasSigning = false
+
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+        hasSigning = true
+    } else {
+        // Fallback to environment variables (for GitHub Actions CI/CD)
+        val envFile = System.getenv("ANDROID_SIGNING_KEY_FILE")
+        val envStorePass = System.getenv("ANDROID_SIGNING_STORE_PASSWORD")
+        val envAlias = System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+        val envKeyPass = System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+
+        if (!envFile.isNullOrBlank() && !envStorePass.isNullOrBlank() && !envAlias.isNullOrBlank() && !envKeyPass.isNullOrBlank()) {
+            keystoreProperties["storeFile"] = envFile
+            keystoreProperties["storePassword"] = envStorePass
+            keystoreProperties["keyAlias"] = envAlias
+            keystoreProperties["keyPassword"] = envKeyPass
+            hasSigning = true
+        }
+    }
+
     defaultConfig {
         applicationId = "com.mhm.speaktowrite"
         minSdk = 24
         targetSdk = 36
         versionCode = 2
         versionName = "1.0.1"
+    }
+
+    signingConfigs {
+        if (hasSigning) {
+            create("release") {
+                val storePath = keystoreProperties["storeFile"] as String
+                storeFile = file(storePath)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
     }
 
     splits {
@@ -26,9 +66,17 @@ android {
 
     buildTypes {
         release {
+            if (hasSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        debug {
+            if (hasSigning) {
+                signingConfig = signingConfigs.getByName("release") // Use release key for local debug for seamless updating
+            }
         }
     }
     compileOptions {

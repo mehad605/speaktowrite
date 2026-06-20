@@ -53,7 +53,15 @@ jobs:
             echo "GENERATE_NOTES=true" >> $GITHUB_ENV
           fi
 
-      - name: Build Split APKs
+      - name: Decode Keystore (Secure CI/CD)
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -n "$SIGNING_KEY_BASE64" ]; then
+            echo "$SIGNING_KEY_BASE64" | base64 --decode > app/signing-key.jks
+          fi
+
+      - name: Build Split Release APKs
         # CI Build Optimizations:
         # --build-cache: Instructs Gradle to use its build cache (stored by setup-gradle action)
         # --no-daemon: Frees up memory on single-use runners immediately upon task completion
@@ -61,8 +69,13 @@ jobs:
         # -Dorg.gradle.jvmargs: Sets optimal JVM heap size (4GB heap size is highly suited for GitHub Actions runners)
         # -Dkotlin.compiler.execution.strategy="in-process": Speeds up Kotlin compilation by avoiding process overhead
         # -Pandroid.enablePngCrunching=false: Speeds up packaging by skipping PNG optimization for debug builds
+        env:
+          ANDROID_SIGNING_KEY_FILE: "signing-key.jks"
+          ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          ./gradlew assembleDebug \
+          ./gradlew assembleRelease \
             --build-cache \
             --no-daemon \
             --parallel \
@@ -72,10 +85,10 @@ jobs:
 
       - name: Rename & Package Artifacts
         run: |
-          mv app/build/outputs/apk/debug/app-arm64-v8a-debug.apk ./speak2write-${{ env.VERSION }}-arm64-v8a.apk
-          mv app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk ./speak2write-${{ env.VERSION }}-armeabi-v7a.apk
-          mv app/build/outputs/apk/debug/app-x86-debug.apk ./speak2write-${{ env.VERSION }}-x86.apk
-          mv app/build/outputs/apk/debug/app-x86_64-debug.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
+          mv app/build/outputs/apk/release/app-arm64-v8a-release.apk ./speak2write-${{ env.VERSION }}-arm64-v8a.apk
+          mv app/build/outputs/apk/release/app-armeabi-v7a-release.apk ./speak2write-${{ env.VERSION }}-armeabi-v7a.apk
+          mv app/build/outputs/apk/release/app-x86-release.apk ./speak2write-${{ env.VERSION }}-x86.apk
+          mv app/build/outputs/apk/release/app-x86_64-release.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
