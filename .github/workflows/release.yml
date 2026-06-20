@@ -58,7 +58,7 @@ jobs:
           SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY }}
         run: |
           if [ -n "$SIGNING_KEY_BASE64" ]; then
-            echo "$SIGNING_KEY_BASE64" | base64 --decode > app/signing-key.jks
+            echo "$SIGNING_KEY_BASE64" | base64 -di > app/signing-key.jks
           fi
 
       - name: Build Split Release APKs
