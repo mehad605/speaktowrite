@@ -28,6 +28,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ScrollView
+import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -102,10 +104,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private var overlayView: LinearLayout? = null
     private var micButton: ImageView? = null
     private var arrowButton: ImageView? = null
+    private var promptArrowButton: ImageView? = null
     private var dividerView: View? = null
     private var layoutParams: WindowManager.LayoutParams? = null
     private var dropdownView: LinearLayout? = null
     private var isDropdownOpen = false
+    private var activeDropdownType: DropdownType? = null
+
+    private enum class DropdownType { MODELS, PROMPTS }
 
     // ── Audio ───────────────────────────────────────────────────────────
     private var audioRecord: AudioRecord? = null
@@ -177,7 +183,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val arrowSize = (ARROW_DP * dp).toInt()
         val pad = (PAD_DP * dp).toInt()
         val margin = (MARGIN_DP * dp).toInt()
-        val totalW = micSize + arrowSize
+
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+        val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
+        val totalW = if (hasValidApiKey) micSize + arrowSize * 2 else micSize + arrowSize
 
         // Mic ImageView
         val micImg = ImageView(this).apply {
@@ -197,12 +206,23 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 .apply { setMargins(0, (12 * dp).toInt(), 0, (12 * dp).toInt()) }
         }
 
-        // Arrow ImageView
+        // Arrow ImageView (Model)
         val arrowImg = ImageView(this).apply {
             setImageResource(R.drawable.ic_dropdown)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setColorFilter(0xFF10B981.toInt())
             setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad) // Symmetrical padding prevents visual swinging/shifting on rotation
+        }
+
+        // Prompt Arrow ImageView
+        var promptArrowImg: ImageView? = null
+        if (hasValidApiKey) {
+            promptArrowImg = ImageView(this).apply {
+                setImageResource(R.drawable.ic_dropdown)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setColorFilter(0xFF3B82F6.toInt()) // Sleek blue for prompts to visually differentiate
+                setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad)
+            }
         }
 
         // Root container — pill-shaped
@@ -216,6 +236,9 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         container.addView(micImg, LinearLayout.LayoutParams(micSize, micSize))
         container.addView(div)
         container.addView(arrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
+        if (hasValidApiKey && promptArrowImg != null) {
+            container.addView(promptArrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
+        }
 
         val params = WindowManager.LayoutParams(
             totalW, micSize,
@@ -262,8 +285,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                         abs(ev.rawY - touchY) < TAP_THRESHOLD_DP * dp
                     ) {
                         // Determine zone from local X
-                        val isMicZone = ev.x <= micSize
-                        onZoneTap(isMicZone)
+                        val tapX = ev.x
+                        if (tapX <= micSize) {
+                            onZoneTapMic()
+                        } else if (hasValidApiKey && tapX > micSize + arrowSize) {
+                            onZoneTapPrompt()
+                        } else {
+                            onZoneTapModel()
+                        }
                     } else {
                         // Snap to edge
                         val targetX = if (params.x + totalW / 2 > screenW / 2) {
@@ -280,7 +309,6 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         }
 
         val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
-        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
         if (km.isKeyguardLocked && !settings.showOnLockScreen) {
             container.visibility = View.GONE
         }
@@ -289,6 +317,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         overlayView = container
         micButton = micImg
         arrowButton = arrowImg
+        promptArrowButton = promptArrowImg
         dividerView = div
         layoutParams = params
     }
@@ -301,6 +330,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         overlayView = null
         micButton = null
         arrowButton = null
+        promptArrowButton = null
         dividerView = null
         layoutParams = null
     }
@@ -310,14 +340,26 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     // ====================================================================
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun showDropdown() {
+    private fun showDropdown(type: DropdownType) {
         if (isDropdownOpen) return
         isDropdownOpen = true
+        activeDropdownType = type
 
-        val models = TranscriberManager.getInstalledModels(this)
-        if (models.isEmpty()) {
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+
+        val models = if (type == DropdownType.MODELS) TranscriberManager.getInstalledModels(this) else emptyList()
+        val prompts = if (type == DropdownType.PROMPTS) settings.prompts else emptyList()
+
+        if (type == DropdownType.MODELS && models.isEmpty()) {
             toast("No models installed — download one in the app")
             isDropdownOpen = false
+            activeDropdownType = null
+            return
+        }
+        if (type == DropdownType.PROMPTS && prompts.isEmpty()) {
+            toast("No prompts available")
+            isDropdownOpen = false
+            activeDropdownType = null
             return
         }
 
@@ -327,9 +369,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val itemH = (44 * dp).toInt()
         val pad = (8 * dp).toInt()
         val radius = (16 * dp).toInt()
-        val maxVisible = 8
+        val maxVisible = 3
 
-        val visibleCount = models.size.coerceAtMost(maxVisible)
+        val itemsCount = if (type == DropdownType.MODELS) models.size else prompts.size
+        val visibleCount = itemsCount.coerceAtMost(maxVisible)
         val dropdownH = visibleCount * itemH + pad * 2
 
         // Build dropdown LinearLayout
@@ -348,64 +391,138 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             elevation = 12 * dp
         }
 
-        val currentModel = TranscriberManager.currentModel.value
+        // Add ScrollView inside container to enable scrolling
+        val scrollView = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            isVerticalScrollBarEnabled = true
+        }
 
-        models.forEachIndexed { index, (archive, displayName) ->
-            val isSelected = archive == currentModel
+        val scrollContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
 
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding((8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    val r = 8 * dp
-                    cornerRadii = floatArrayOf(r, r, r, r, r, r, r, r)
-                    setColor(if (isSelected) DROPDOWN_ITEM_SELECTED_BG else DROPDOWN_ITEM_BG)
-                }
-            }
+        if (type == DropdownType.MODELS) {
+            val currentModel = TranscriberManager.currentModel.value
+            models.forEachIndexed { index, (archive, displayName) ->
+                val isSelected = archive == currentModel
 
-            val label = TextView(this).apply {
-                text = displayName
-                setTextColor(if (isSelected) DROPDOWN_ACCENT else DROPDOWN_TEXT)
-                setTypeface(null, if (isSelected) Typeface.BOLD else Typeface.NORMAL)
-                textSize = 13f
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            row.addView(label)
-
-            if (isSelected) {
-                val check = ImageView(this).apply {
-                    setImageResource(R.drawable.ic_check)
-                    setColorFilter(DROPDOWN_ACCENT)
-                    val s = (14 * dp).toInt()
-                    layoutParams = LinearLayout.LayoutParams(s, s)
-                }
-                row.addView(check)
-            }
-
-            row.setOnClickListener { onModelSelected(archive) }
-
-            container.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, itemH))
-
-            // Separator between items (not after last visible)
-            if (index < models.size - 1 && index < maxVisible - 1) {
-                val sep = View(this).apply {
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding((8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        setColor(0xFF2C373A.toInt())
+                        val r = 8 * dp
+                        cornerRadii = floatArrayOf(r, r, r, r, r, r, r, r)
+                        setColor(if (isSelected) DROPDOWN_ITEM_SELECTED_BG else DROPDOWN_ITEM_BG)
                     }
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-                    ).apply { setMargins((8 * dp).toInt(), 0, (8 * dp).toInt(), 0) }
                 }
-                container.addView(sep)
+
+                val label = TextView(this).apply {
+                    text = displayName
+                    setTextColor(if (isSelected) DROPDOWN_ACCENT else DROPDOWN_TEXT)
+                    setTypeface(null, if (isSelected) Typeface.BOLD else Typeface.NORMAL)
+                    textSize = 13f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                row.addView(label)
+
+                if (isSelected) {
+                    val check = ImageView(this).apply {
+                        setImageResource(R.drawable.ic_check)
+                        setColorFilter(DROPDOWN_ACCENT)
+                        val s = (14 * dp).toInt()
+                        layoutParams = LinearLayout.LayoutParams(s, s)
+                    }
+                    row.addView(check)
+                }
+
+                row.setOnClickListener { onModelSelected(archive) }
+                scrollContent.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, itemH))
+
+                if (index < models.size - 1) {
+                    val sep = View(this).apply {
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            setColor(0xFF2C373A.toInt())
+                        }
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
+                        ).apply { setMargins((8 * dp).toInt(), 0, (8 * dp).toInt(), 0) }
+                    }
+                    scrollContent.addView(sep)
+                }
+            }
+        } else {
+            val currentPromptId = settings.selectedPromptId
+            prompts.forEachIndexed { index, preset ->
+                val isSelected = preset.id == currentPromptId
+
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding((8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        val r = 8 * dp
+                        cornerRadii = floatArrayOf(r, r, r, r, r, r, r, r)
+                        setColor(if (isSelected) DROPDOWN_ITEM_SELECTED_BG else DROPDOWN_ITEM_BG)
+                    }
+                }
+
+                val label = TextView(this).apply {
+                    text = preset.title
+                    setTextColor(if (isSelected) DROPDOWN_ACCENT else DROPDOWN_TEXT)
+                    setTypeface(null, if (isSelected) Typeface.BOLD else Typeface.NORMAL)
+                    textSize = 13f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                row.addView(label)
+
+                if (isSelected) {
+                    val check = ImageView(this).apply {
+                        setImageResource(R.drawable.ic_check)
+                        setColorFilter(DROPDOWN_ACCENT)
+                        val s = (14 * dp).toInt()
+                        layoutParams = LinearLayout.LayoutParams(s, s)
+                    }
+                    row.addView(check)
+                }
+
+                row.setOnClickListener { onPromptSelected(preset.id, preset.title) }
+                scrollContent.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, itemH))
+
+                if (index < prompts.size - 1) {
+                    val sep = View(this).apply {
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            setColor(0xFF2C373A.toInt())
+                        }
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
+                        ).apply { setMargins((8 * dp).toInt(), 0, (8 * dp).toInt(), 0) }
+                    }
+                    scrollContent.addView(sep)
+                }
             }
         }
 
+        scrollView.addView(scrollContent)
+        container.addView(scrollView)
+
+        // Sizing & Positioning calculations
+        val micSize = (MIC_DP * dp).toInt()
+        val arrowSize = (ARROW_DP * dp).toInt()
+
         // Position above the button, or below if near top of screen
-        val btnCenterY = lp.y + lp.height / 2
-        val showAbove = btnCenterY > dropdownH + (16 * dp)
+        val showAbove = (type == DropdownType.MODELS)
 
         val dropdownParams = WindowManager.LayoutParams(
             (200 * dp).toInt(),
@@ -415,7 +532,19 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = lp.x + lp.width / 2 - width / 2
+
+            val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
+            val arrowX = if (hasValidApiKey) {
+                if (type == DropdownType.MODELS) {
+                    lp.x + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
+                } else {
+                    lp.x + micSize + arrowSize + arrowSize / 2 - (200 * dp).toInt() / 2
+                }
+            } else {
+                lp.x + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
+            }
+
+            x = arrowX
             y = if (showAbove) lp.y - dropdownH - (8 * dp).toInt()
                  else lp.y + lp.height + (8 * dp).toInt()
         }
@@ -433,13 +562,15 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         wm.addView(container, dropdownParams)
         dropdownView = container
 
-        // Rotate arrow to point up
-        arrowButton?.animate()?.rotation(180f)?.setDuration(180)?.start()
+        // Rotate target arrow to point up
+        val targetArrow = if (type == DropdownType.MODELS) arrowButton else promptArrowButton
+        targetArrow?.animate()?.rotation(180f)?.setDuration(180)?.start()
     }
 
     private fun removeDropdown() {
         if (!isDropdownOpen) return
         isDropdownOpen = false
+        activeDropdownType = null
 
         val view = dropdownView ?: return
         view.animate()
@@ -454,8 +585,9 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             }
             .start()
 
-        // Rotate arrow back to down
+        // Rotate arrows back to down
         arrowButton?.animate()?.rotation(0f)?.setDuration(120)?.start()
+        promptArrowButton?.animate()?.rotation(0f)?.setDuration(120)?.start()
     }
 
     private fun onModelSelected(archive: String) {
@@ -466,6 +598,13 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         // Load the new model — the observer will catch isLoading and enter LOADING_MODEL
         TranscriberManager.loadModel(this, archive)
+    }
+
+    private fun onPromptSelected(id: String, title: String) {
+        removeDropdown()
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+        settings.selectedPromptId = id
+        toast("Active prompt: $title")
     }
 
     // ====================================================================
@@ -481,6 +620,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 micButton?.alpha = 1f
                 dividerView?.visibility = View.VISIBLE
                 arrowButton?.visibility = View.VISIBLE
+
+                val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+                val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
+                promptArrowButton?.visibility = if (hasValidApiKey) View.VISIBLE else View.GONE
             }
             State.RECORDING -> {
                 setButtonBg(pillBg(COLOR_RECORDING))
@@ -488,6 +631,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 micButton?.alpha = 1f
                 dividerView?.visibility = View.GONE
                 arrowButton?.visibility = View.GONE
+                promptArrowButton?.visibility = View.GONE
                 startPulse()
             }
             State.TRANSCRIBING -> {
@@ -497,32 +641,25 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 micButton?.alpha = 1f
                 dividerView?.visibility = View.GONE
                 arrowButton?.visibility = View.GONE
+                promptArrowButton?.visibility = View.GONE
             }
             State.LOADING_MODEL -> {
                 setButtonBg(pillBg(COLOR_LOADING))
                 micButton?.setColorFilter(0xFF9DB0AC.toInt()) // dimmed
                 dividerView?.visibility = View.GONE
                 arrowButton?.visibility = View.GONE
+                promptArrowButton?.visibility = View.GONE
             }
         }
     }
 
-    private fun onZoneTap(isMicZone: Boolean) {
+    private fun onZoneTapMic() {
         when (state) {
             State.IDLE -> {
-                if (isMicZone) {
-                    if (isDropdownOpen) removeDropdown()
-                    startRecording()
-                } else {
-                    if (isDropdownOpen) {
-                        removeDropdown() // Tapping the now up arrow close toggles it
-                    } else {
-                        showDropdown()
-                    }
-                }
+                removeDropdown()
+                startRecording()
             }
             State.RECORDING -> {
-                // Any tap stops recording (arrow is hidden, so all taps land on mic)
                 stopAndTranscribe()
             }
             State.TRANSCRIBING -> {
@@ -531,6 +668,32 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             State.LOADING_MODEL -> {
                 toast("Model is loading into memory — please wait")
             }
+        }
+    }
+
+    private fun onZoneTapModel() {
+        if (state != State.IDLE) {
+            if (state == State.TRANSCRIBING) toast("Transcribing… please wait")
+            if (state == State.LOADING_MODEL) toast("Model is loading into memory — please wait")
+            return
+        }
+        if (isDropdownOpen && activeDropdownType == DropdownType.MODELS) {
+            removeDropdown()
+        } else {
+            showDropdown(DropdownType.MODELS)
+        }
+    }
+
+    private fun onZoneTapPrompt() {
+        if (state != State.IDLE) {
+            if (state == State.TRANSCRIBING) toast("Transcribing… please wait")
+            if (state == State.LOADING_MODEL) toast("Model is loading into memory — please wait")
+            return
+        }
+        if (isDropdownOpen && activeDropdownType == DropdownType.PROMPTS) {
+            removeDropdown()
+        } else {
+            showDropdown(DropdownType.PROMPTS)
         }
     }
 
@@ -784,6 +947,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                     overlayView?.visibility = View.GONE
                 } else {
                     overlayView?.visibility = View.VISIBLE
+                }
+            } else if (key == "api_key" || key == "is_api_key_valid") {
+                handler.post {
+                    removeOverlay()
+                    showOverlay()
                 }
             }
         }

@@ -13,6 +13,10 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("api_key", "") ?: ""
         set(value) = prefs.edit().putString("api_key", value).apply()
 
+    var isApiKeyValid: Boolean
+        get() = prefs.getBoolean("is_api_key_valid", false)
+        set(value) = prefs.edit().putBoolean("is_api_key_valid", value).apply()
+
     var cleanupEnabled: Boolean
         get() = prefs.getBoolean("cleanup_enabled", false)
         set(value) = prefs.edit().putBoolean("cleanup_enabled", value).apply()

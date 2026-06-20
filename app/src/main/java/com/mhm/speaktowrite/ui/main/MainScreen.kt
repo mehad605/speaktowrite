@@ -136,6 +136,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
     fun verifyKeyAndFetchModels(key: String) {
         if (key.isBlank()) {
             isValidKey = null
+            settingsManager.isApiKeyValid = false
             return
         }
         isCheckingKey = true
@@ -143,6 +144,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
             val result = com.mhm.speaktowrite.models.GeminiClient.getAvailableModels(key)
             if (result.isSuccess) {
                 isValidKey = true
+                settingsManager.isApiKeyValid = true
                 val models = result.getOrNull()
                 if (!models.isNullOrEmpty()) {
                     aiModels = models
@@ -153,6 +155,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 }
             } else {
                 isValidKey = false
+                settingsManager.isApiKeyValid = false
             }
             isCheckingKey = false
         }
@@ -392,6 +395,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     onApiKeyChange = {
                         apiKey = it
                         settingsManager.apiKey = it
+                        settingsManager.isApiKeyValid = false
                         if (it.isBlank()) isValidKey = null
                     },
                     isValidKey = isValidKey,
