@@ -3,6 +3,7 @@ package com.mhm.speaktowrite.ui.sections
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.mhm.speaktowrite.theme.AuroraError
 import com.mhm.speaktowrite.theme.AuroraSurface
 import com.mhm.speaktowrite.theme.Emerald
+import com.mhm.speaktowrite.theme.Teal
 import com.mhm.speaktowrite.ui.components.AuroraDivider
 import com.mhm.speaktowrite.ui.components.AuroraSwitch
 import com.mhm.speaktowrite.ui.components.GlassCard
@@ -133,6 +135,7 @@ fun AiPolishSection(
                 placeholder = { Text("Enter API key", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
+                shape = RoundedCornerShape(8.dp), // Sharper corners for matte look
                 trailingIcon = {
                     when {
                         isCheckingKey -> CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Emerald, strokeWidth = 2.dp)
@@ -167,6 +170,7 @@ fun AiPolishSection(
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp), // Sharper corners for matte look
                     colors = auroraFieldColors(),
                 )
                 ExposedDropdownMenu(
@@ -223,6 +227,22 @@ fun AiPolishSection(
                         ),
                     )
                     Spacer(Modifier.width(8.dp))
+                    
+                    // Flat colored pip from mockup
+                    val pipColor = when (prompt.id) {
+                        "1" -> Emerald
+                        "2" -> Teal
+                        "3" -> com.mhm.speaktowrite.theme.AuroraInfo
+                        else -> MaterialTheme.colorScheme.secondary
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(pipColor)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    
                     Column(modifier = Modifier.weight(1f)) {
                         Text(prompt.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
                         Text(

@@ -53,19 +53,19 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         private const val MARGIN_DP = 16
         private const val TAP_THRESHOLD_DP = 10
 
-        // Aurora overlay palette
-        private const val COLOR_IDLE = 0xDD0E1F1C.toInt()
-        private const val COLOR_RECORDING = 0xDDEF4444.toInt()
-        private const val COLOR_BUSY = 0xDD14302C.toInt()
-        private const val COLOR_LOADING = 0xDD2C3030.toInt()
+        // Aurora overlay palette (Zinc/Matte Redesign)
+        private const val COLOR_IDLE = 0xDD112A20.toInt()
+        private const val COLOR_RECORDING = 0xDD3A1010.toInt()
+        private const val COLOR_BUSY = 0xDD0B2A30.toInt()
+        private const val COLOR_LOADING = 0xDD1E1E22.toInt() // Zinc 900 variant surface
 
         // Dropdown panel colors
-        private const val DROPDOWN_BG = 0xEE12181A.toInt()
-        private const val DROPDOWN_BORDER = 0x442C373A.toInt()
-        private const val DROPDOWN_ITEM_BG = 0xFF1A2123.toInt()
-        private const val DROPDOWN_ITEM_SELECTED_BG = 0xFF0E1F1C.toInt()
-        private const val DROPDOWN_TEXT = 0xFFEAF2F0.toInt()
-        private const val DROPDOWN_ACCENT = 0xFF22C28E.toInt()
+        private const val DROPDOWN_BG = 0xEE1E1E22.toInt()        // Zinc 900 variant
+        private const val DROPDOWN_BORDER = 0xFF2C2C30.toInt()    // Solid border
+        private const val DROPDOWN_ITEM_BG = 0xFF121214.toInt()    // Very dark gray/black
+        private const val DROPDOWN_ITEM_SELECTED_BG = 0xFF1E1E22.toInt()
+        private const val DROPDOWN_TEXT = 0xFFFAFAFA.toInt()       // Zinc 50
+        private const val DROPDOWN_ACCENT = 0xFF10B981.toInt()     // Matte Emerald
 
         var instance: SpeakToWriteAccessibilityService? = null
             private set
@@ -191,7 +191,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val div = View(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(0x5522C28E.toInt())
+                setColor(0x5510B981.toInt())
             }
             layoutParams = LinearLayout.LayoutParams((1 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
                 .apply { setMargins(0, (12 * dp).toInt(), 0, (12 * dp).toInt()) }
@@ -201,8 +201,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val arrowImg = ImageView(this).apply {
             setImageResource(R.drawable.ic_dropdown)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setColorFilter(0xFF22C28E.toInt())
-            setPadding(0, pad, pad, pad)
+            setColorFilter(0xFF10B981.toInt())
+            setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad) // Symmetrical padding prevents visual swinging/shifting on rotation
         }
 
         // Root container — pill-shaped
@@ -510,8 +510,16 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private fun onZoneTap(isMicZone: Boolean) {
         when (state) {
             State.IDLE -> {
-                if (isMicZone) startRecording()
-                else showDropdown()
+                if (isMicZone) {
+                    if (isDropdownOpen) removeDropdown()
+                    startRecording()
+                } else {
+                    if (isDropdownOpen) {
+                        removeDropdown() // Tapping the now up arrow close toggles it
+                    } else {
+                        showDropdown()
+                    }
+                }
             }
             State.RECORDING -> {
                 // Any tap stops recording (arrow is hidden, so all taps land on mic)
@@ -697,7 +705,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         micButton?.alpha = 1f
     }
 
-    /** Pill-shaped background with optional emerald ring for idle. */
+    /** Pill-shaped background with solid borders matching the matte design states. */
     private fun pillBg(color: Int): GradientDrawable {
         val radius = 24 * dp
         return GradientDrawable().apply {
@@ -707,8 +715,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 radius, radius, radius, radius,
             )
             setColor(color)
-            if (color == COLOR_IDLE) {
-                setStroke((1.5 * dp).toInt(), 0xFF22C28E.toInt())
+            when (color) {
+                COLOR_IDLE -> setStroke((2 * dp).toInt(), 0xFF10B981.toInt())
+                COLOR_RECORDING -> setStroke((2 * dp).toInt(), 0xFFEF4444.toInt())
+                COLOR_BUSY -> setStroke((2 * dp).toInt(), 0xFF06B6D4.toInt())
+                COLOR_LOADING -> setStroke((2 * dp).toInt(), 0xFF71717A.toInt())
             }
         }
     }

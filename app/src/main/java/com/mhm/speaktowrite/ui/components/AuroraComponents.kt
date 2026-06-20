@@ -50,17 +50,14 @@ import com.mhm.speaktowrite.theme.Emerald
 import com.mhm.speaktowrite.theme.EmeraldBright
 import com.mhm.speaktowrite.theme.Teal
 
-/** The single brand gradient, used for accents, progress bars, headlines. */
-val BrandBrush =
-    Brush.linearGradient(
-        colors = listOf(EmeraldBright, Emerald, Teal),
-    )
+import androidx.compose.ui.graphics.SolidColor
+import com.mhm.speaktowrite.theme.TextTertiary
 
-/** A soft two-stop brand gradient for chips, badges, fills. */
-val BrandBrushSoft =
-    Brush.linearGradient(
-        colors = listOf(EmeraldBright, Teal),
-    )
+/** The single brand gradient, redesigned to be a solid matte color. */
+val BrandBrush = SolidColor(Emerald)
+
+/** A soft brand gradient, redesigned to be a solid matte color. */
+val BrandBrushSoft = SolidColor(Emerald)
 
 enum class AuroraStatus { SUCCESS, WARNING, ERROR, INFO }
 
@@ -73,9 +70,8 @@ private fun AuroraStatus.color() =
     }
 
 /**
- * "Glass" card — the workhorse surface of the whole UI. A subtle gradient
- * surface, a hairline border, and an optional brand-tinted outer glow when
- * [highlighted].
+ * Matte card — the workhorse surface of the whole UI. A solid
+ * surface (Zinc 900) with a sharp 18dp corner shape and flat solid border.
  */
 @Composable
 fun GlassCard(
@@ -84,25 +80,20 @@ fun GlassCard(
     contentPadding: PaddingValues = PaddingValues(0.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    val border = if (highlighted) Emerald.copy(alpha = 0.55f) else AuroraBorder
+    val shape = RoundedCornerShape(18.dp) // Sharper matte card corners (HTML: 18px)
+    val border = if (highlighted) Emerald else AuroraBorder
     Column(
         modifier =
             modifier
                 .clip(shape)
-                .background(
-                    Brush.verticalGradient(
-                        0f to MaterialTheme.colorScheme.surfaceVariant,
-                        1f to MaterialTheme.colorScheme.surface,
-                    )
-                )
+                .background(MaterialTheme.colorScheme.surface) // Solid matte background, no vertical gradient
                 .border(BorderStroke(1.dp, border), shape)
                 .padding(contentPadding),
         content = content,
     )
 }
 
-/** Animated pulsing glow ring — used behind a headline status icon. */
+/** Animated pulsing ring — draws an expanding solid outline around status icon. */
 @Composable
 fun PulsingGlow(
     color: Color = Emerald,
@@ -112,8 +103,8 @@ fun PulsingGlow(
     val transition = rememberInfiniteTransition(label = "aurora-glow")
     val alpha by
         transition.animateFloat(
-            initialValue = 0.10f,
-            targetValue = 0.40f,
+            initialValue = 0.15f,
+            targetValue = 0.35f,
             animationSpec =
                 infiniteRepeatable(
                     animation = tween(1400),
@@ -135,7 +126,7 @@ fun PulsingGlow(
     ) { content() }
 }
 
-/** Brand-gradient text — used for the app title. */
+/** Brand-color text. */
 @Composable
 fun GradientText(
     text: String,
@@ -148,7 +139,7 @@ fun GradientText(
 
 /**
  * Eyebrow label — small, uppercase, letter-spaced text that introduces a
- * section, optionally prefixed with a step number chip.
+ * section, prefixed with a solid matte step number chip.
  */
 @Composable
 fun SectionEyebrow(
@@ -166,13 +157,13 @@ fun SectionEyebrow(
                     Modifier
                         .size(22.dp)
                         .clip(CircleShape)
-                        .background(BrandBrushSoft)
-                        .border(BorderStroke(1.dp, EmeraldBright.copy(alpha = 0.6f)), CircleShape),
+                        .background(Emerald) // Solid matte background
+                        .border(BorderStroke(1.dp, Emerald), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = step.toString(),
-                    color = Color(0xFF06120E),
+                    color = Color(0xFF09090B), // Zinc 950 contrast text
                     fontWeight = FontWeight.Black,
                     fontSize = 11.sp,
                 )
@@ -182,12 +173,12 @@ fun SectionEyebrow(
         Text(
             text = text.uppercase(),
             style = MaterialTheme.typography.labelMedium,
-            color = EmeraldBright,
+            color = TextTertiary, // Zinc 500 label (HTML: var(--text-muted))
         )
     }
 }
 
-/** Pill-shaped status chip with an optional icon. */
+/** Pill-shaped status chip (Redesigned as sharper badge). */
 @Composable
 fun StatusChip(
     label: String,
@@ -199,9 +190,9 @@ fun StatusChip(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(50))
-                .background(tint.copy(alpha = 0.14f))
-                .border(BorderStroke(1.dp, tint.copy(alpha = 0.5f)), RoundedCornerShape(50))
+                .clip(RoundedCornerShape(8.dp)) // Sharper matte badge (HTML: 8px)
+                .background(tint.copy(alpha = 0.15f)) // Matches HTML em-dim
+                .border(BorderStroke(1.dp, tint), RoundedCornerShape(8.dp))
                 .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -213,7 +204,7 @@ fun StatusChip(
     }
 }
 
-/** Compact circular icon badge used at the start of list rows. */
+/** Sharper icon badge used at the start of list rows (Redesigned to 10dp rounded square). */
 @Composable
 fun IconBadge(
     icon: ImageVector,
@@ -222,13 +213,14 @@ fun IconBadge(
     size: Int = 38,
     iconSize: Int = 20,
 ) {
+    val shape = RoundedCornerShape(10.dp) // Flat border wrapper (HTML: 10px)
     Box(
         modifier =
             modifier
                 .size(size.dp)
-                .clip(CircleShape)
-                .background(tint.copy(alpha = 0.14f))
-                .border(BorderStroke(1.dp, tint.copy(alpha = 0.35f)), CircleShape),
+                .clip(shape)
+                .background(tint.copy(alpha = 0.15f))
+                .border(BorderStroke(1.dp, tint), shape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize.dp))
@@ -298,13 +290,13 @@ fun DoneBadge() {
             Modifier
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(BrandBrushSoft),
+                .background(Emerald), // Solid matte Emerald fill
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             Icons.Default.Check,
             contentDescription = "Done",
-            tint = Color(0xFF06120E),
+            tint = Color(0xFF09090B), // Zinc 950
             modifier = Modifier.size(16.dp),
         )
     }

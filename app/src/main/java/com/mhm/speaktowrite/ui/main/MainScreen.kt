@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -53,6 +56,9 @@ import com.mhm.speaktowrite.models.ModelDownloader
 import com.mhm.speaktowrite.models.SettingsManager
 import com.mhm.speaktowrite.models.TranscriberManager
 import com.mhm.speaktowrite.theme.AuroraBackgroundEnd
+import com.mhm.speaktowrite.theme.Emerald
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
 import com.mhm.speaktowrite.ui.components.AuroraStatus
 import com.mhm.speaktowrite.ui.components.BrandBrushSoft
 import com.mhm.speaktowrite.ui.components.GlassCard
@@ -322,12 +328,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to MaterialTheme.colorScheme.background,
-                            1f to com.mhm.speaktowrite.theme.AuroraBackgroundEnd,
-                        )
-                    )
+                    .background(MaterialTheme.colorScheme.background)
         ) {
             Column(
                 modifier =
@@ -517,26 +518,33 @@ fun MainScreen(modifier: Modifier = Modifier) {
 private fun HeroHeader(ready: Boolean) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Animated glowing status dot.
+            // Animated solid status dot (Matte redone).
             PulsingGlow(modifier = Modifier.padding(end = 4.dp)) {
                 Box(
                     modifier =
                         Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(BrandBrushSoft)
-                            .padding(8.dp),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(BorderStroke(2.dp, Emerald), CircleShape)
+                            .padding(10.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = null,
-                        tint = androidx.compose.ui.graphics.Color(0xFF06120E),
+                        tint = Emerald,
                     )
                 }
             }
             Column(modifier = Modifier.padding(start = 8.dp)) {
-                GradientText(
-                    text = "Speak to Write",
+                Text(
+                    text = androidx.compose.ui.text.buildAnnotatedString {
+                        append("Speak to ")
+                        withStyle(style = androidx.compose.ui.text.SpanStyle(color = Emerald)) {
+                            append("Write")
+                        }
+                    },
                     style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Private, on-device voice dictation",

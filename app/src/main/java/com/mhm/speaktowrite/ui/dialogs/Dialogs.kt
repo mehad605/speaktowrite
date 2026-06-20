@@ -47,9 +47,9 @@ import com.mhm.speaktowrite.ui.main.PromptPreset
 fun LoadingModelDialog() {
     Dialog(onDismissRequest = {}) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp), // Sharper matte shape
             colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, Emerald), // Solid border
         ) {
             Row(
                 modifier = Modifier.padding(24.dp),
@@ -72,9 +72,9 @@ fun LoadingModelDialog() {
 fun HelpDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp), // Sharper matte shape
             colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, Emerald), // Solid border
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
@@ -127,9 +127,9 @@ fun PromptEditorDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp), // Sharper matte shape
             colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, Emerald), // Solid border
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
@@ -146,6 +146,7 @@ fun PromptEditorDialog(
                     label = { Text("Title") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp), // Sharper corners for matte look
                     colors = fieldColors(),
                 )
                 Spacer(Modifier.height(12.dp))
@@ -160,6 +161,7 @@ fun PromptEditorDialog(
                         .heightIn(min = 180.dp, max = 320.dp)
                         .verticalScroll(rememberScrollState()),
                     textStyle = MaterialTheme.typography.bodyMedium,
+                    shape = RoundedCornerShape(8.dp), // Sharper corners for matte look
                     colors = fieldColors(),
                 )
                 Spacer(Modifier.height(6.dp))
@@ -190,9 +192,9 @@ fun DeletePromptConfirmDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp), // Sharper matte shape
             colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error), // Solid border
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
@@ -236,9 +238,9 @@ fun ExportConfigDialog(
     var includeApiKey by remember { mutableStateOf(true) }
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp), // Sharper matte shape
             colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, Emerald), // Solid border
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(

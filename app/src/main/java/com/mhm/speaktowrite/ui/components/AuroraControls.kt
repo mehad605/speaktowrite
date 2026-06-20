@@ -40,7 +40,7 @@ import com.mhm.speaktowrite.theme.TextPrimary
 import com.mhm.speaktowrite.theme.TextTertiary
 
 /**
- * Primary action button — brand gradient fill, dark text, subtle.
+ * Primary action button — solid matte Emerald fill, dark text (Zinc 950), sharper 8dp corners.
  * Used sparingly (e.g. the "Save" action in dialogs).
  */
 @Composable
@@ -55,17 +55,17 @@ fun BrandButton(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(BrandBrush, alpha = alpha)
-                .border(BorderStroke(1.dp, Emerald.copy(alpha = 0.6f)), RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(8.dp)) // Sharper corners for matte look
+                .background(BrandBrush, alpha = alpha) // Solid Emerald (via SolidColor Brush) instead of gradient
+                .border(BorderStroke(1.dp, Emerald), RoundedCornerShape(8.dp))
                 .clickable(enabled = enabled) { onClick() }
                 .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text, color = Color(0xFF06120E), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 14.sp)
+        Text(text, color = Color(0xFF09090B), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 14.sp)
         if (trailingIcon != null) {
             Spacer(Modifier.width(6.dp))
-            Icon(trailingIcon, contentDescription = null, tint = Color(0xFF06120E), modifier = Modifier.widthIn(max = 16.dp))
+            Icon(trailingIcon, contentDescription = null, tint = Color(0xFF09090B), modifier = Modifier.widthIn(max = 16.dp))
         }
     }
 }
@@ -83,9 +83,9 @@ fun OutlineButton(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(Emerald.copy(alpha = 0.06f))
-                .border(BorderStroke(1.dp, Emerald.copy(alpha = 0.5f)), RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(8.dp)) // Sharper corners (HTML: 8px)
+                .background(Emerald.copy(alpha = 0.15f)) // Matches HTML em-dim
+                .border(BorderStroke(1.dp, Emerald), RoundedCornerShape(8.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -116,14 +116,14 @@ fun AuroraTextField(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val borderColor = if (focused) Emerald.copy(alpha = 0.8f) else AuroraBorder
+    val borderColor = if (focused) Emerald else AuroraBorder
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(14.dp)),
+                .clip(RoundedCornerShape(8.dp)) // Sharper corners for matte look
+                .background(MaterialTheme.colorScheme.background) // Matte background (Zinc 950)
+                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(8.dp)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             BasicTextField(
@@ -169,11 +169,11 @@ fun AuroraSwitch(
         modifier = modifier,
         colors =
             SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF06120E),
+                checkedThumbColor = Color(0xFF09090B), // Zinc 950 contrast
                 checkedTrackColor = Emerald,
                 checkedBorderColor = Emerald,
                 uncheckedThumbColor = TextTertiary,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant, // Matches card surface variant
                 uncheckedBorderColor = AuroraBorder,
             ),
     )
