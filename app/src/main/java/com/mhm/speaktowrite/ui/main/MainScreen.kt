@@ -128,10 +128,28 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var selectedAiModel by remember { mutableStateOf(settingsManager.selectedAiModel) }
     var cleanupEnabled by remember { mutableStateOf(settingsManager.cleanupEnabled) }
     var showOnLockScreen by remember { mutableStateOf(settingsManager.showOnLockScreen) }
+    var selectedPromptId by remember { mutableStateOf(settingsManager.selectedPromptId) }
     var aiModels by remember { mutableStateOf(listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")) }
     var isCheckingKey by remember { mutableStateOf(false) }
     var isValidKey by remember { mutableStateOf<Boolean?>(null) }
     var expandedModelDropdown by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "api_key" -> apiKey = settingsManager.apiKey
+                "selected_ai_model" -> selectedAiModel = settingsManager.selectedAiModel
+                "cleanup_enabled" -> cleanupEnabled = settingsManager.cleanupEnabled
+                "show_on_lock_screen" -> showOnLockScreen = settingsManager.showOnLockScreen
+                "selected_prompt_id" -> selectedPromptId = settingsManager.selectedPromptId
+            }
+        }
+        val prefs = context.getSharedPreferences("speaktowrite_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
 
     fun verifyKeyAndFetchModels(key: String) {
         if (key.isBlank()) {
@@ -167,7 +185,6 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
     // ── Prompts ──────────────────────────────────────────────────────────
     val prompts = remember { mutableStateListOf(*settingsManager.prompts.toTypedArray()) }
-    var selectedPromptId by remember { mutableStateOf(settingsManager.selectedPromptId) }
     var showPromptDialog by remember { mutableStateOf(false) }
     var editingPrompt by remember { mutableStateOf<PromptPreset?>(null) }
 

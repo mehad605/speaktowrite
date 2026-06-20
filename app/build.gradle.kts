@@ -35,12 +35,15 @@ android {
         }
     }
 
+    val envVersionName = System.getenv("APP_VERSION_NAME")
+    val envVersionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull()
+
     defaultConfig {
         applicationId = "com.mhm.speaktowrite"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = envVersionCode ?: 2
+        versionName = envVersionName ?: "1.0.1"
     }
 
     signingConfigs {

@@ -356,12 +356,6 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             activeDropdownType = null
             return
         }
-        if (type == DropdownType.PROMPTS && prompts.isEmpty()) {
-            toast("No prompts available")
-            isDropdownOpen = false
-            activeDropdownType = null
-            return
-        }
 
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
         val lp = layoutParams ?: return
@@ -371,7 +365,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val radius = (16 * dp).toInt()
         val maxVisible = 3
 
-        val itemsCount = if (type == DropdownType.MODELS) models.size else prompts.size
+        val itemsCount = if (type == DropdownType.MODELS) models.size else prompts.size + 1
         val visibleCount = itemsCount.coerceAtMost(maxVisible)
         val dropdownH = visibleCount * itemH + pad * 2
 
@@ -461,9 +455,60 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 }
             }
         } else {
+            // First item: No Post-processing
+            val isNoPostSelected = !settings.cleanupEnabled
+
+            val noPostRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((8 * dp).toInt(), (10 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    val r = 8 * dp
+                    cornerRadii = floatArrayOf(r, r, r, r, r, r, r, r)
+                    setColor(if (isNoPostSelected) DROPDOWN_ITEM_SELECTED_BG else DROPDOWN_ITEM_BG)
+                }
+            }
+
+            val noPostLabel = TextView(this).apply {
+                text = "No Post-processing"
+                setTextColor(if (isNoPostSelected) DROPDOWN_ACCENT else DROPDOWN_TEXT)
+                setTypeface(null, if (isNoPostSelected) Typeface.BOLD else Typeface.NORMAL)
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            noPostRow.addView(noPostLabel)
+
+            if (isNoPostSelected) {
+                val check = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_check)
+                    setColorFilter(DROPDOWN_ACCENT)
+                    val s = (14 * dp).toInt()
+                    layoutParams = LinearLayout.LayoutParams(s, s)
+                }
+                noPostRow.addView(check)
+            }
+
+            noPostRow.setOnClickListener { onPromptSelected(null, "No Post-processing") }
+            scrollContent.addView(noPostRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, itemH))
+
+            if (prompts.isNotEmpty()) {
+                val sep = View(this).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(0xFF2C373A.toInt())
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
+                    ).apply { setMargins((8 * dp).toInt(), 0, (8 * dp).toInt(), 0) }
+                }
+                scrollContent.addView(sep)
+            }
+
+            // Other prompt presets
             val currentPromptId = settings.selectedPromptId
             prompts.forEachIndexed { index, preset ->
-                val isSelected = preset.id == currentPromptId
+                val isSelected = settings.cleanupEnabled && preset.id == currentPromptId
 
                 val row = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -600,10 +645,15 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         TranscriberManager.loadModel(this, archive)
     }
 
-    private fun onPromptSelected(id: String, title: String) {
+    private fun onPromptSelected(id: String?, title: String) {
         removeDropdown()
         val settings = com.mhm.speaktowrite.models.SettingsManager(this)
-        settings.selectedPromptId = id
+        if (id == null) {
+            settings.cleanupEnabled = false
+        } else {
+            settings.cleanupEnabled = true
+            settings.selectedPromptId = id
+        }
         toast("Active prompt: $title")
     }
 

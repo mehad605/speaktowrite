@@ -46,12 +46,17 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "VERSION=${{ github.event.inputs.version_number }}" >> $GITHUB_ENV
+            RAW_VER="${{ github.event.inputs.version_number }}"
             echo "GENERATE_NOTES=${{ github.event.inputs.generate_release_notes }}" >> $GITHUB_ENV
           else
-            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+            RAW_VER="${{ github.ref_name }}"
             echo "GENERATE_NOTES=true" >> $GITHUB_ENV
           fi
+          CLEAN_VER=$(echo "$RAW_VER" | sed 's/^v//')
+          VAL_CODE=$((100 + ${{ github.run_number }}))
+          echo "VERSION=$RAW_VER" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VER" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VAL_CODE" >> $GITHUB_ENV
 
       - name: Decode Keystore (Secure CI/CD)
         env:
@@ -74,6 +79,8 @@ jobs:
           ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          APP_VERSION_NAME: ${{ env.CLEAN_VERSION }}
+          APP_VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           ./gradlew assembleRelease \
             --build-cache \
