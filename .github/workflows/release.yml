@@ -85,10 +85,10 @@ jobs:
 
       - name: Rename & Package Artifacts
         run: |
-          mv app/build/outputs/apk/release/app-arm64-v8a-release.apk ./speak2write-${{ env.VERSION }}-arm64-v8a.apk
-          mv app/build/outputs/apk/release/app-armeabi-v7a-release.apk ./speak2write-${{ env.VERSION }}-armeabi-v7a.apk
-          mv app/build/outputs/apk/release/app-x86-release.apk ./speak2write-${{ env.VERSION }}-x86.apk
-          mv app/build/outputs/apk/release/app-x86_64-release.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
+          mv app/build/outputs/apk/release/app-arm64-v8a-release*.apk ./speak2write-${{ env.VERSION }}-arm64-v8a.apk
+          mv app/build/outputs/apk/release/app-armeabi-v7a-release*.apk ./speak2write-${{ env.VERSION }}-armeabi-v7a.apk
+          mv app/build/outputs/apk/release/app-x86-release*.apk ./speak2write-${{ env.VERSION }}-x86.apk
+          mv app/build/outputs/apk/release/app-x86_64-release*.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
