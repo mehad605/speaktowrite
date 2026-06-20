@@ -1,10 +1,13 @@
 name: Build & Release Android App
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version_number:
-        description: 'Enter the release version (e.g., v1.0.0)'
+        description: 'Enter the release version (e.g., v1.0.1)'
         required: true
         type: string
       generate_release_notes:
@@ -39,7 +42,18 @@ jobs:
       - name: Grant Execute Permissions
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version_number }}" >> $GITHUB_ENV
+            echo "GENERATE_NOTES=${{ github.event.inputs.generate_release_notes }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "GENERATE_NOTES=true" >> $GITHUB_ENV
+          fi
+
+      - name: Build Split APKs
         # CI Build Optimizations:
         # --build-cache: Instructs Gradle to use its build cache (stored by setup-gradle action)
         # --no-daemon: Frees up memory on single-use runners immediately upon task completion
@@ -56,17 +70,23 @@ jobs:
             -Dkotlin.compiler.execution.strategy="in-process" \
             -Pandroid.enablePngCrunching=false
 
-      - name: Rename & Package Artifact
+      - name: Rename & Package Artifacts
         run: |
-          mv app/build/outputs/apk/debug/app-debug.apk ./speak2write-${{ github.event.inputs.version_number }}.apk
+          mv app/build/outputs/apk/debug/app-arm64-v8a-debug.apk ./speak2write-${{ env.VERSION }}-arm64-v8a.apk
+          mv app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk ./speak2write-${{ env.VERSION }}-armeabi-v7a.apk
+          mv app/build/outputs/apk/debug/app-x86-debug.apk ./speak2write-${{ env.VERSION }}-x86.apk
+          mv app/build/outputs/apk/debug/app-x86_64-debug.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version_number }}
-          name: Release ${{ github.event.inputs.version_number }}
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
-          generate_release_notes: ${{ github.event.inputs.generate_release_notes }}
+          generate_release_notes: ${{ env.GENERATE_NOTES }}
           files: |
-            speak2write-${{ github.event.inputs.version_number }}.apk
+            speak2write-${{ env.VERSION }}-arm64-v8a.apk
+            speak2write-${{ env.VERSION }}-armeabi-v7a.apk
+            speak2write-${{ env.VERSION }}-x86.apk
+            speak2write-${{ env.VERSION }}-x86_64.apk
