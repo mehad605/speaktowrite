@@ -118,6 +118,11 @@ jobs:
           OTHER=""
           while IFS= read -r line; do
             lower=$(echo "$line" | tr '[:upper:]' '[:lower:]')
+            # Skip infra/CI/docs/config commits — not user-facing
+            case "$lower" in
+              *"release"*|*"ci:"*|*"cd:"*|*"workflow"*|*"gitignore"*|*"readme"*|*"docs:"*|*"changelog"*|*"gradle"*|*"dependabot"*|*"bump"*|*"version"*)
+                continue ;;
+            esac
             case "$lower" in
               *"feat:"*|*"feature:"*|*"add"*|*"new"*|*"implement"*)
                 FEATURES="$FEATURES\n$line" ;;

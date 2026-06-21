@@ -48,6 +48,17 @@ Thumbs.db
 captures/
 *.log
 
+# Runtime logs and crash dumps
+log.txt
+crash.txt
+
+# Generated JAR / compiled bytecode
+classes.jar
+com/
+
+# Scratch / inspection scripts
+Inspect.kt
+
 # Native build folders
 .externalNativeBuild/
 .cxx/

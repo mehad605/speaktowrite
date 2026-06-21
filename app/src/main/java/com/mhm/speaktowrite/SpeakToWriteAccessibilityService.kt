@@ -979,38 +979,47 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         // Sizing & Positioning calculations
         val micSize = (MIC_DP * dp).toInt()
         val arrowSize = (ARROW_DP * dp).toInt()
+        val dropdownW = (200 * dp).toInt()
+        val gap = (8 * dp).toInt()
 
-        // Position above the button, or below if near top of screen
-        val showAbove = (type == DropdownType.MODELS)
+        val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
+        val totalW = if (hasValidApiKey) micSize + arrowSize * 2 + (1 * dp).toInt() else micSize + arrowSize + (1 * dp).toInt()
 
-        val containerParams = controlPanelContainer?.layoutParams as? FrameLayout.LayoutParams ?: return
-        val containerX = containerParams.leftMargin
-        val containerY = containerParams.topMargin
-        val containerHeight = controlPanelContainer?.height ?: micSize
+        // Root's screen X position based on which edge it's docked to
+        val rootScreenX = if (settings.sliderIsLeftEdge) 0 else screenW - totalW
+
+        // Arrow centers on screen (relative to root's left edge)
+        val modelArrowCenter = rootScreenX + micSize + (1 * dp).toInt() + arrowSize / 2
+        val promptArrowCenter = rootScreenX + micSize + (1 * dp).toInt() + arrowSize + arrowSize / 2
+
+        // Dropdown X: centered on the tapped arrow, clamped to screen
+        val arrowCenter = if (type == DropdownType.PROMPTS && hasValidApiKey) promptArrowCenter else modelArrowCenter
+        val dropX = (arrowCenter - dropdownW / 2).coerceIn(0, screenW - dropdownW)
+
+        // Dropdown Y: model prefers above, prompt prefers below; flips if near edge
+        val prefersAbove = type == DropdownType.MODELS
+        val roomAbove = lp.y >= dropdownH + gap
+        val roomBelow = lp.y + micSize + gap + dropdownH <= screenH
+        val dropY = if (prefersAbove && roomAbove) {
+            lp.y - dropdownH - gap
+        } else if (!prefersAbove && roomBelow) {
+            lp.y + micSize + gap
+        } else if (roomAbove) {
+            lp.y - dropdownH - gap
+        } else {
+            lp.y + micSize + gap
+        }
 
         val dropdownParams = WindowManager.LayoutParams(
-            (200 * dp).toInt(),
+            dropdownW,
             dropdownH,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-
-            val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
-            val arrowX = if (hasValidApiKey) {
-                if (type == DropdownType.MODELS) {
-                    containerX + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
-                } else {
-                    containerX + micSize + arrowSize + arrowSize / 2 - (200 * dp).toInt() / 2
-                }
-            } else {
-                containerX + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
-            }
-
-            x = arrowX
-            y = if (showAbove) containerY - dropdownH - (8 * dp).toInt()
-                 else containerY + containerHeight + (8 * dp).toInt()
+            x = dropX
+            y = dropY
         }
 
         // Animate in
