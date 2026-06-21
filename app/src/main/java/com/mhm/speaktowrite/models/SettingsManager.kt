@@ -37,6 +37,18 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("selected_prompt_id", "1") ?: "1"
         set(value) = prefs.edit().putString("selected_prompt_id", value).apply()
 
+    var sliderY: Int
+        get() = prefs.getInt("slider_y", -1)
+        set(value) = prefs.edit().putInt("slider_y", value).apply()
+
+    var sliderIsLeftEdge: Boolean
+        get() = prefs.getBoolean("slider_is_left_edge", false)
+        set(value) = prefs.edit().putBoolean("slider_is_left_edge", value).apply()
+
+    var sliderOpacity: Float
+        get() = prefs.getFloat("slider_opacity", 0.5f)
+        set(value) = prefs.edit().putFloat("slider_opacity", value).apply()
+
     var prompts: List<PromptPreset>
         get() {
             // Built-in presets. New default presets are added here; the

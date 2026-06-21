@@ -129,6 +129,8 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var cleanupEnabled by remember { mutableStateOf(settingsManager.cleanupEnabled) }
     var showOnLockScreen by remember { mutableStateOf(settingsManager.showOnLockScreen) }
     var selectedPromptId by remember { mutableStateOf(settingsManager.selectedPromptId) }
+    var sliderIsLeftEdge by remember { mutableStateOf(settingsManager.sliderIsLeftEdge) }
+    var sliderOpacity by remember { mutableStateOf(settingsManager.sliderOpacity) }
     var aiModels by remember { mutableStateOf(listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro")) }
     var isCheckingKey by remember { mutableStateOf(false) }
     var isValidKey by remember { mutableStateOf<Boolean?>(null) }
@@ -142,6 +144,8 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 "cleanup_enabled" -> cleanupEnabled = settingsManager.cleanupEnabled
                 "show_on_lock_screen" -> showOnLockScreen = settingsManager.showOnLockScreen
                 "selected_prompt_id" -> selectedPromptId = settingsManager.selectedPromptId
+                "slider_is_left_edge" -> sliderIsLeftEdge = settingsManager.sliderIsLeftEdge
+                "slider_opacity" -> sliderOpacity = settingsManager.sliderOpacity
             }
         }
         val prefs = context.getSharedPreferences("speaktowrite_prefs", android.content.Context.MODE_PRIVATE)
@@ -369,6 +373,16 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     onShowOnLockScreenToggle = {
                         showOnLockScreen = it
                         settingsManager.showOnLockScreen = it
+                    },
+                    sliderIsLeftEdge = sliderIsLeftEdge,
+                    onSliderIsLeftEdgeToggle = {
+                        sliderIsLeftEdge = it
+                        settingsManager.sliderIsLeftEdge = it
+                    },
+                    sliderOpacity = sliderOpacity,
+                    onSliderOpacityChange = {
+                        sliderOpacity = it
+                        settingsManager.sliderOpacity = it
                     },
                     onAudioClick = {
                         if (!hasAudioPermission) audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)

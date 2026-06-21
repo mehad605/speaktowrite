@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
@@ -100,8 +101,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private enum class State { IDLE, RECORDING, TRANSCRIBING, LOADING_MODEL }
     private var state = State.IDLE
 
+    private enum class SliderState { COLLAPSED, EXPANDED }
+    private var sliderState = SliderState.COLLAPSED
+
     // ── Views ───────────────────────────────────────────────────────────
-    private var overlayView: LinearLayout? = null
+    private var rootWrapper: FrameLayout? = null
+    private var handleView: View? = null
+    private var controlPanelContainer: LinearLayout? = null
+    private var backdropView: View? = null
     private var micButton: ImageView? = null
     private var arrowButton: ImageView? = null
     private var promptArrowButton: ImageView? = null
@@ -178,156 +185,445 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
     @SuppressLint("ClickTouchListener", "ClickableViewAccessibility")
     private fun showOverlay() {
+        updateOverlayLayout()
+    }
+
+    private fun expandSlider() {
+        if (sliderState == SliderState.EXPANDED) return
+        sliderState = SliderState.EXPANDED
+        removeDropdown()
+        updateOverlayLayout()
+    }
+
+    private fun collapseSlider() {
+        if (sliderState == SliderState.COLLAPSED) return
+        removeDropdown()
+
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+        val isLeftEdge = settings.sliderIsLeftEdge
+
+        val micSize = (MIC_DP * dp).toInt()
+        val arrowSize = (ARROW_DP * dp).toInt()
+        val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
+        val totalW = if (hasValidApiKey) micSize + arrowSize * 2 else micSize + arrowSize
+
+        val handleWidth = (6 * dp).toInt()
+        val handleHeight = (72 * dp).toInt()
+
+        // Create the temporary handle to animate sliding in
+        val tempHandle = View(this).apply {
+            background = pillBg(getStateColor(state)).mutate().apply {
+                val alphaPercent = (1.0f - settings.sliderOpacity).coerceIn(0.0f, 1.0f)
+                alpha = (alphaPercent * 255).toInt()
+            }
+        }
+
+        val savedY = settings.sliderY.let {
+            if (it == -1) screenH / 4 else it
+        }
+
+        val tempHandleParams = FrameLayout.LayoutParams(handleWidth, handleHeight).apply {
+            val margin = (MARGIN_DP * dp).toInt()
+            gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.TOP
+            topMargin = savedY.coerceIn(margin, screenH - handleHeight - margin)
+        }
+
+        rootWrapper?.addView(tempHandle, tempHandleParams)
+
+        // Initial off-screen translation for the handle
+        val handleStartTranslationX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+        tempHandle.translationX = handleStartTranslationX
+
+        // Target translations
+        val containerTargetX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
+
+        // Animate control panel sliding out
+        controlPanelContainer?.animate()
+            ?.translationX(containerTargetX)
+            ?.setDuration(220)
+            ?.setInterpolator(DecelerateInterpolator())
+            ?.start()
+
+        // Animate handle sliding in
+        tempHandle.animate()
+            ?.translationX(0f)
+            ?.setDuration(220)
+            ?.setInterpolator(DecelerateInterpolator())
+            ?.withEndAction {
+                sliderState = SliderState.COLLAPSED
+                updateOverlayLayout()
+            }
+            ?.start()
+    }
+
+    @SuppressLint("ClickTouchListener", "ClickableViewAccessibility")
+    private fun updateOverlayLayout() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+        val isLeftEdge = settings.sliderIsLeftEdge
+
         val micSize = (MIC_DP * dp).toInt()
         val arrowSize = (ARROW_DP * dp).toInt()
         val pad = (PAD_DP * dp).toInt()
         val margin = (MARGIN_DP * dp).toInt()
 
-        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
         val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
         val totalW = if (hasValidApiKey) micSize + arrowSize * 2 else micSize + arrowSize
 
-        // Mic ImageView
-        val micImg = ImageView(this).apply {
-            setImageResource(R.drawable.ic_mic)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(pad, pad, pad, pad)
-            setColorFilter(0xFFFFFFFF.toInt())
+        val root = rootWrapper ?: FrameLayout(this).also { rootWrapper = it }
+        val isAdded = root.parent != null
+
+        val width = if (sliderState == SliderState.COLLAPSED) {
+            (24 * dp).toInt()
+        } else {
+            screenW
+        }
+        val height = if (sliderState == SliderState.COLLAPSED) {
+            (72 * dp).toInt()
+        } else {
+            screenH
         }
 
-        // Divider (1dp emerald line between mic and arrow)
-        val div = View(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setColor(0x5510B981.toInt())
-            }
-            layoutParams = LinearLayout.LayoutParams((1 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
-                .apply { setMargins(0, (12 * dp).toInt(), 0, (12 * dp).toInt()) }
-        }
-
-        // Arrow ImageView (Model)
-        val arrowImg = ImageView(this).apply {
-            setImageResource(R.drawable.ic_dropdown)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setColorFilter(0xFF10B981.toInt())
-            setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad) // Symmetrical padding prevents visual swinging/shifting on rotation
-        }
-
-        // Prompt Arrow ImageView
-        var promptArrowImg: ImageView? = null
-        if (hasValidApiKey) {
-            promptArrowImg = ImageView(this).apply {
-                setImageResource(R.drawable.ic_dropdown)
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
-                setColorFilter(0xFF3B82F6.toInt()) // Sleek blue for prompts to visually differentiate
-                setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad)
-            }
-        }
-
-        // Root container — pill-shaped
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            elevation = 8 * dp
-            clipChildren = false
-            background = pillBg(COLOR_IDLE)
-        }
-        container.addView(micImg, LinearLayout.LayoutParams(micSize, micSize))
-        container.addView(div)
-        container.addView(arrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
-        if (hasValidApiKey && promptArrowImg != null) {
-            container.addView(promptArrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
+        val savedY = settings.sliderY.let {
+            if (it == -1) screenH / 4 else it
         }
 
         val params = WindowManager.LayoutParams(
-            totalW, micSize,
+            width, height,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = screenW - totalW - margin
-            y = screenH / 2 - micSize / 2
-        }
-
-        // Touch handling — zone-aware tap vs drag
-        var startX = 0; var startY = 0
-        var touchX = 0f; var touchY = 0f
-        var isDragging = false
-
-        container.setOnTouchListener { v, ev ->
-            when (ev.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    startX = params.x
-                    startY = params.y
-                    touchX = ev.rawX
-                    touchY = ev.rawY
-                    isDragging = false
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = ev.rawX - touchX
-                    val dy = ev.rawY - touchY
-                    if (abs(dx) > TAP_THRESHOLD_DP * dp || abs(dy) > TAP_THRESHOLD_DP * dp) {
-                        isDragging = true
-                    }
-                    if (isDragging) {
-                        params.x = startX + dx.toInt()
-                        params.y = startY + dy.toInt()
-                        wm.updateViewLayout(v, params)
-                    }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (!isDragging &&
-                        abs(ev.rawX - touchX) < TAP_THRESHOLD_DP * dp &&
-                        abs(ev.rawY - touchY) < TAP_THRESHOLD_DP * dp
-                    ) {
-                        // Determine zone from local X
-                        val tapX = ev.x
-                        if (tapX <= micSize) {
-                            onZoneTapMic()
-                        } else if (hasValidApiKey && tapX > micSize + arrowSize) {
-                            onZoneTapPrompt()
-                        } else {
-                            onZoneTapModel()
-                        }
-                    } else {
-                        // Snap to edge
-                        val targetX = if (params.x + totalW / 2 > screenW / 2) {
-                            screenW - totalW - margin
-                        } else {
-                            margin
-                        }
-                        animateSnap(params.x, targetX, params, wm, v)
-                    }
-                    true
-                }
-                else -> false
+            windowAnimations = 0
+            if (sliderState == SliderState.COLLAPSED) {
+                x = if (isLeftEdge) 0 else screenW - width
+                y = savedY.coerceIn(margin, screenH - height - margin)
+            } else {
+                x = 0
+                y = 0
             }
+        }
+        layoutParams = params
+
+        root.removeAllViews()
+
+        if (sliderState == SliderState.COLLAPSED) {
+            val handleWidth = (6 * dp).toInt()
+            val handleHeight = (72 * dp).toInt()
+
+            val handle = View(this).apply {
+                background = pillBg(getStateColor(state))
+            }
+            handleView = handle
+
+            val handleParams = FrameLayout.LayoutParams(handleWidth, handleHeight).apply {
+                gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
+            }
+            root.addView(handle, handleParams)
+
+            // Apply System Gesture Exclusion Rects to bypass Android back swipe trigger
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                root.post {
+                    try {
+                        root.systemGestureExclusionRects = listOf(
+                            Rect(0, 0, width, height)
+                        )
+                    } catch (_: Exception) {}
+                }
+            }
+
+            var startY = 0
+            var touchX = 0f; var touchY = 0f
+            var isDragging = false
+            var isLongPressed = false
+            var currentIsLeftEdge = isLeftEdge
+            val longPressHandler = Handler(Looper.getMainLooper())
+
+            val longPressRunnable = Runnable {
+                isLongPressed = true
+                val jumpAmount = (8 * dp).toInt()
+                val targetTranslationX = if (currentIsLeftEdge) jumpAmount.toFloat() else -jumpAmount.toFloat()
+                handleView?.animate()?.translationX(targetTranslationX)?.setDuration(150)?.start()
+                
+                try {
+                    root.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                } catch (_: Exception) {}
+            }
+
+            root.setOnTouchListener { _, ev ->
+                when (ev.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startY = params.y
+                        touchX = ev.rawX
+                        touchY = ev.rawY
+                        isDragging = false
+                        isLongPressed = false
+                        currentIsLeftEdge = settings.sliderIsLeftEdge
+                        longPressHandler.postDelayed(longPressRunnable, 500)
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = ev.rawX - touchX
+                        val dy = ev.rawY - touchY
+                        
+                        if (!isLongPressed && (abs(dx) > TAP_THRESHOLD_DP * dp || abs(dy) > TAP_THRESHOLD_DP * dp)) {
+                            longPressHandler.removeCallbacks(longPressRunnable)
+                            isDragging = true
+                        }
+                        
+                        if (isLongPressed) {
+                            params.y = (startY + dy.toInt()).coerceIn(margin, screenH - handleHeight - margin)
+                            
+                            val rawX = ev.rawX
+                            val jumpAmount = (8 * dp).toInt()
+                            
+                            if (currentIsLeftEdge && rawX > screenW / 2) {
+                                currentIsLeftEdge = false
+                                settings.sliderIsLeftEdge = false
+                                params.x = screenW - width
+                                
+                                handleView?.background = pillBg(getStateColor(state))
+                                handleView?.translationX = -jumpAmount.toFloat()
+                            } else if (!currentIsLeftEdge && rawX < screenW / 2) {
+                                currentIsLeftEdge = true
+                                settings.sliderIsLeftEdge = true
+                                params.x = 0
+                                
+                                handleView?.background = pillBg(getStateColor(state))
+                                handleView?.translationX = jumpAmount.toFloat()
+                            }
+                            
+                            try { wm.updateViewLayout(root, params) } catch (_: Exception) {}
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        longPressHandler.removeCallbacks(longPressRunnable)
+                        
+                        if (isLongPressed) {
+                            settings.sliderY = params.y
+                            settings.sliderIsLeftEdge = currentIsLeftEdge
+                            
+                            handleView?.animate()?.translationX(0f)?.setDuration(150)?.withEndAction {
+                                removeOverlay()
+                                showOverlay()
+                            }?.start()
+                        } else if (ev.action == MotionEvent.ACTION_UP) {
+                            val dx = ev.rawX - touchX
+                            val swipeThreshold = 30 * dp
+                            val expand = if (currentIsLeftEdge) {
+                                dx > swipeThreshold
+                            } else {
+                                dx < -swipeThreshold
+                            }
+                            
+                            if (expand) {
+                                expandSlider()
+                            } else {
+                                handleView?.animate()?.translationX(0f)?.setDuration(150)?.start()
+                            }
+                        } else {
+                            handleView?.animate()?.translationX(0f)?.setDuration(150)?.start()
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+        } else {
+            val backdrop = View(this).apply {
+                setBackgroundColor(0x00000000)
+                setOnClickListener {
+                    collapseSlider()
+                }
+            }
+            backdropView = backdrop
+            root.addView(backdrop, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+
+            val micImg = ImageView(this).apply {
+                setImageResource(R.drawable.ic_mic)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setPadding(pad, pad, pad, pad)
+                setColorFilter(0xFFFFFFFF.toInt())
+            }
+            micButton = micImg
+
+            val div = View(this).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(0x5510B981.toInt())
+                }
+                layoutParams = LinearLayout.LayoutParams((1 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                    setMargins(0, (12 * dp).toInt(), 0, (12 * dp).toInt())
+                }
+            }
+            dividerView = div
+
+            val arrowImg = ImageView(this).apply {
+                setImageResource(R.drawable.ic_dropdown)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setColorFilter(0xFF10B981.toInt())
+                setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad)
+            }
+            arrowButton = arrowImg
+
+            var promptArrowImg: ImageView? = null
+            if (hasValidApiKey) {
+                promptArrowImg = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_dropdown)
+                    scaleType = ImageView.ScaleType.CENTER_INSIDE
+                    setColorFilter(0xFF3B82F6.toInt())
+                    setPadding((8 * dp).toInt(), pad, (8 * dp).toInt(), pad)
+                }
+            }
+            promptArrowButton = promptArrowImg
+
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                elevation = 8 * dp
+                clipChildren = false
+                background = pillBg(getStateColor(state))
+            }
+            controlPanelContainer = container
+
+            container.addView(micImg, LinearLayout.LayoutParams(micSize, micSize))
+            container.addView(div)
+            container.addView(arrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
+            if (hasValidApiKey && promptArrowImg != null) {
+                container.addView(promptArrowImg, LinearLayout.LayoutParams(arrowSize, micSize))
+            }
+
+            val containerParams = FrameLayout.LayoutParams(totalW, micSize).apply {
+                gravity = Gravity.TOP or Gravity.START
+                leftMargin = if (isLeftEdge) 0 else screenW - totalW
+                topMargin = savedY.coerceIn(margin, screenH - micSize - margin)
+            }
+            root.addView(container, containerParams)
+
+            // Create temporary handle to slide offscreen while container slides onscreen
+            val handleWidth = (6 * dp).toInt()
+            val handleHeight = (72 * dp).toInt()
+            val tempHandle = View(this).apply {
+                background = pillBg(getStateColor(state)).mutate().apply {
+                    val alphaPercent = (1.0f - settings.sliderOpacity).coerceIn(0.0f, 1.0f)
+                    alpha = (alphaPercent * 255).toInt()
+                }
+            }
+            val tempHandleParams = FrameLayout.LayoutParams(handleWidth, handleHeight).apply {
+                gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.TOP
+                topMargin = savedY.coerceIn(margin, screenH - handleHeight - margin)
+            }
+            root.addView(tempHandle, tempHandleParams)
+
+            var startY = 0
+            var touchX = 0f; var touchY = 0f
+            var isDragging = false
+
+            container.setOnTouchListener { v, ev ->
+                when (ev.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        val lp = v.layoutParams as FrameLayout.LayoutParams
+                        startY = lp.topMargin
+                        touchX = ev.rawX
+                        touchY = ev.rawY
+                        isDragging = false
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = ev.rawX - touchX
+                        val dy = ev.rawY - touchY
+                        if (abs(dx) > TAP_THRESHOLD_DP * dp || abs(dy) > TAP_THRESHOLD_DP * dp) {
+                            isDragging = true
+                        }
+                        if (isDragging) {
+                            val lp = v.layoutParams as FrameLayout.LayoutParams
+                            lp.topMargin = (startY + dy.toInt()).coerceIn(margin, screenH - micSize - margin)
+                            v.layoutParams = lp
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val dx = ev.rawX - touchX
+                        val dy = ev.rawY - touchY
+                        if (!isDragging &&
+                            abs(dx) < TAP_THRESHOLD_DP * dp &&
+                            abs(dy) < TAP_THRESHOLD_DP * dp
+                        ) {
+                            val tapX = ev.x
+                            if (tapX <= micSize) {
+                                onZoneTapMic()
+                            } else if (hasValidApiKey && tapX > micSize + arrowSize) {
+                                onZoneTapPrompt()
+                            } else {
+                                onZoneTapModel()
+                            }
+                        } else {
+                            val lp = v.layoutParams as FrameLayout.LayoutParams
+                            settings.sliderY = lp.topMargin
+
+                            val swipeThreshold = 30 * dp
+                            val collapsed = if (isLeftEdge) {
+                                dx < -swipeThreshold
+                            } else {
+                                dx > swipeThreshold
+                            }
+
+                            if (collapsed) {
+                                collapseSlider()
+                            }
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+            container.translationX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
+            tempHandle.translationX = 0f
+
+            container.animate()
+                .translationX(0f)
+                .setDuration(220)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+
+            val handleTargetTranslationX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+            tempHandle.animate()
+                .translationX(handleTargetTranslationX)
+                .setDuration(220)
+                .setInterpolator(DecelerateInterpolator())
+                .withEndAction {
+                    root.removeView(tempHandle)
+                }
+                .start()
         }
 
         val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
         if (km.isKeyguardLocked && !settings.showOnLockScreen) {
-            container.visibility = View.GONE
+            root.visibility = View.GONE
+        } else {
+            root.visibility = View.VISIBLE
         }
 
-        wm.addView(container, params)
-        overlayView = container
-        micButton = micImg
-        arrowButton = arrowImg
-        promptArrowButton = promptArrowImg
-        dividerView = div
-        layoutParams = params
+        if (!isAdded) {
+            try { wm.addView(root, params) } catch (_: Exception) {}
+        } else {
+            try { wm.updateViewLayout(root, params) } catch (_: Exception) {}
+        }
     }
 
     private fun removeOverlay() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
-        overlayView?.let {
+        rootWrapper?.let {
             try { wm.removeView(it) } catch (_: Exception) {}
         }
-        overlayView = null
+        rootWrapper = null
+        handleView = null
+        controlPanelContainer = null
+        backdropView = null
         micButton = null
         arrowButton = null
         promptArrowButton = null
@@ -569,6 +865,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         // Position above the button, or below if near top of screen
         val showAbove = (type == DropdownType.MODELS)
 
+        val containerParams = controlPanelContainer?.layoutParams as? FrameLayout.LayoutParams ?: return
+        val containerX = containerParams.leftMargin
+        val containerY = containerParams.topMargin
+        val containerHeight = controlPanelContainer?.height ?: micSize
+
         val dropdownParams = WindowManager.LayoutParams(
             (200 * dp).toInt(),
             dropdownH,
@@ -581,17 +882,17 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             val hasValidApiKey = settings.apiKey.isNotBlank() && settings.isApiKeyValid
             val arrowX = if (hasValidApiKey) {
                 if (type == DropdownType.MODELS) {
-                    lp.x + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
+                    containerX + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
                 } else {
-                    lp.x + micSize + arrowSize + arrowSize / 2 - (200 * dp).toInt() / 2
+                    containerX + micSize + arrowSize + arrowSize / 2 - (200 * dp).toInt() / 2
                 }
             } else {
-                lp.x + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
+                containerX + micSize + arrowSize / 2 - (200 * dp).toInt() / 2
             }
 
             x = arrowX
-            y = if (showAbove) lp.y - dropdownH - (8 * dp).toInt()
-                 else lp.y + lp.height + (8 * dp).toInt()
+            y = if (showAbove) containerY - dropdownH - (8 * dp).toInt()
+                 else containerY + containerHeight + (8 * dp).toInt()
         }
 
         // Animate in
@@ -904,8 +1205,9 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     }
 
     private fun startPulse() {
-        micButton?.let {
-            it.animate().alpha(0.5f).setDuration(600).withEndAction {
+        val target = if (sliderState == SliderState.EXPANDED) micButton else handleView
+        target?.let {
+            it.animate().alpha(0.3f).setDuration(600).withEndAction {
                 it.animate().alpha(1f).setDuration(600).withEndAction {
                     if (state == State.RECORDING) startPulse()
                 }.start()
@@ -916,18 +1218,30 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private fun stopPulse() {
         micButton?.animate()?.cancel()
         micButton?.alpha = 1f
+        handleView?.animate()?.cancel()
+        handleView?.alpha = 1f
     }
 
-    /** Pill-shaped background with solid borders matching the matte design states. */
+    /** Pill-shaped background with solid borders matching the matte design states, edge-aware. */
     private fun pillBg(color: Int): GradientDrawable {
+        val settings = com.mhm.speaktowrite.models.SettingsManager(this)
+        val isLeftEdge = settings.sliderIsLeftEdge
         val radius = 24 * dp
+        val radii = if (isLeftEdge) {
+            floatArrayOf(0f, 0f, radius, radius, radius, radius, 0f, 0f)
+        } else {
+            floatArrayOf(radius, radius, 0f, 0f, 0f, 0f, radius, radius)
+        }
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadii = floatArrayOf(
-                radius, radius, radius, radius,
-                radius, radius, radius, radius,
-            )
+            cornerRadii = radii
             setColor(color)
+            if (sliderState == SliderState.COLLAPSED) {
+                val alphaPercent = (1.0f - settings.sliderOpacity).coerceIn(0.0f, 1.0f)
+                alpha = (alphaPercent * 255).toInt()
+            } else {
+                alpha = 255
+            }
             when (color) {
                 COLOR_IDLE -> setStroke((2 * dp).toInt(), 0xFF10B981.toInt())
                 COLOR_RECORDING -> setStroke((2 * dp).toInt(), 0xFFEF4444.toInt())
@@ -938,7 +1252,22 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     }
 
     private fun setButtonBg(drawable: GradientDrawable) {
-        handler.post { overlayView?.background = drawable }
+        handler.post {
+            if (sliderState == SliderState.EXPANDED) {
+                controlPanelContainer?.background = drawable
+            } else {
+                handleView?.background = drawable
+            }
+        }
+    }
+
+    private fun getStateColor(s: State): Int {
+        return when (s) {
+            State.IDLE -> COLOR_IDLE
+            State.RECORDING -> COLOR_RECORDING
+            State.TRANSCRIBING -> COLOR_BUSY
+            State.LOADING_MODEL -> COLOR_LOADING
+        }
     }
 
     private fun toast(msg: String) {
@@ -960,15 +1289,15 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 val isLocked = km.isKeyguardLocked
                 
                 if (intent.action == android.content.Intent.ACTION_SCREEN_OFF) {
-                    overlayView?.visibility = View.GONE
+                    rootWrapper?.visibility = View.GONE
                 } else if (intent.action == android.content.Intent.ACTION_SCREEN_ON) {
                     if (isLocked && !showOnLock) {
-                        overlayView?.visibility = View.GONE
+                        rootWrapper?.visibility = View.GONE
                     } else {
-                        overlayView?.visibility = View.VISIBLE
+                        rootWrapper?.visibility = View.VISIBLE
                     }
                 } else if (intent.action == android.content.Intent.ACTION_USER_PRESENT) {
-                    overlayView?.visibility = View.VISIBLE
+                    rootWrapper?.visibility = View.VISIBLE
                 }
             }
         }
@@ -994,11 +1323,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 val isLocked = km.isKeyguardLocked
                 
                 if (isLocked && !settings.showOnLockScreen) {
-                    overlayView?.visibility = View.GONE
+                    rootWrapper?.visibility = View.GONE
                 } else {
-                    overlayView?.visibility = View.VISIBLE
+                    rootWrapper?.visibility = View.VISIBLE
                 }
-            } else if (key == "api_key" || key == "is_api_key_valid") {
+            } else if (key == "api_key" || key == "is_api_key_valid" || key == "slider_opacity" || key == "slider_is_left_edge") {
                 handler.post {
                     removeOverlay()
                     showOverlay()
