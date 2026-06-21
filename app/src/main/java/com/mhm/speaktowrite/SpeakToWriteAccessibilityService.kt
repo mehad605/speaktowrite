@@ -24,6 +24,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -103,6 +104,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
     private enum class SliderState { COLLAPSED, EXPANDED }
     private var sliderState = SliderState.COLLAPSED
+    private var lastAddedState: SliderState? = null
+    private var isTransitioning = false
 
     // ── Views ───────────────────────────────────────────────────────────
     private var rootWrapper: FrameLayout? = null
@@ -189,14 +192,16 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     }
 
     private fun expandSlider() {
-        if (sliderState == SliderState.EXPANDED) return
-        sliderState = SliderState.EXPANDED
+        if (sliderState == SliderState.EXPANDED || isTransitioning) return
+        isTransitioning = true
         removeDropdown()
+        sliderState = SliderState.EXPANDED
         updateOverlayLayout()
     }
 
     private fun collapseSlider() {
-        if (sliderState == SliderState.COLLAPSED) return
+        if (sliderState == SliderState.COLLAPSED || isTransitioning) return
+        isTransitioning = true
         removeDropdown()
 
         val settings = com.mhm.speaktowrite.models.SettingsManager(this)
@@ -237,7 +242,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         // Target translations
         val containerTargetX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
 
-        // Animate control panel sliding out
+        // Animate control panel sliding out (snappy closing curve)
         controlPanelContainer?.animate()
             ?.translationX(containerTargetX)
             ?.setDuration(220)
@@ -251,6 +256,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             ?.setInterpolator(DecelerateInterpolator())
             ?.withEndAction {
                 sliderState = SliderState.COLLAPSED
+                isTransitioning = false
                 updateOverlayLayout()
             }
             ?.start()
@@ -272,6 +278,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         val root = rootWrapper ?: FrameLayout(this).also { rootWrapper = it }
         val isAdded = root.parent != null
+
+        lastAddedState = sliderState
 
         val width = if (sliderState == SliderState.COLLAPSED) {
             (24 * dp).toInt()
@@ -597,6 +605,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 .setInterpolator(DecelerateInterpolator())
                 .withEndAction {
                     root.removeView(tempHandle)
+                    isTransitioning = false
                 }
                 .start()
         }
@@ -608,7 +617,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             root.visibility = View.VISIBLE
         }
 
-        if (!isAdded) {
+        val isNowAdded = root.parent != null
+        if (!isNowAdded) {
             try { wm.addView(root, params) } catch (_: Exception) {}
         } else {
             try { wm.updateViewLayout(root, params) } catch (_: Exception) {}
@@ -629,6 +639,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         promptArrowButton = null
         dividerView = null
         layoutParams = null
+        isTransitioning = false
     }
 
     // ====================================================================
@@ -682,7 +693,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         }
 
         // Add ScrollView inside container to enable scrolling
-        val scrollView = ScrollView(this).apply {
+        val scrollView = ScrollView(android.view.ContextThemeWrapper(this, R.style.DropdownScrollView)).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT

@@ -11,4 +11,11 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
     </style>
+
+    <style name="DropdownScrollView" parent="android:Widget.ScrollView">
+        <item name="android:scrollbars">vertical</item>
+        <item name="android:scrollbarThumbVertical">@drawable/scrollbar_thumb</item>
+        <item name="android:scrollbarSize">4dp</item>
+        <item name="android:fadeScrollbars">false</item>
+    </style>
 </resources>
