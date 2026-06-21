@@ -97,14 +97,62 @@ jobs:
           mv app/build/outputs/apk/release/app-x86-release*.apk ./speak2write-${{ env.VERSION }}-x86.apk
           mv app/build/outputs/apk/release/app-x86_64-release*.apk ./speak2write-${{ env.VERSION }}-x86_64.apk
 
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          git fetch --tags --force
+
+          PREV_TAG=$(git tag --sort=-version:refname | grep '^v' | sed -n '2p' || echo "")
+          CURRENT_TAG="${{ env.VERSION }}"
+
+          if [ -z "$PREV_TAG" ]; then
+            NOTES_HEADER="## What's New in $CURRENT_TAG\n\nInitial release.\n"
+            COMMITS_LOG=$(git log --oneline --format="* %s" "$CURRENT_TAG" 2>/dev/null || echo "")
+          else
+            NOTES_HEADER="## What's New in $CURRENT_TAG\n\n### Changes since $PREV_TAG\n"
+            COMMITS_LOG=$(git log --oneline --format="* %s" "$PREV_TAG..$CURRENT_TAG" 2>/dev/null || echo "")
+          fi
+
+          FEATURES=""
+          FIXES=""
+          OTHER=""
+          while IFS= read -r line; do
+            lower=$(echo "$line" | tr '[:upper:]' '[:lower:]')
+            case "$lower" in
+              *"feat:"*|*"feature:"*|*"add"*|*"new"*|*"implement"*)
+                FEATURES="$FEATURES\n$line" ;;
+              *"fix:"*|*"bug"*|*"hotfix"*|*"patch"*)
+                FIXES="$FIXES\n$line" ;;
+              *)
+                OTHER="$OTHER\n$line" ;;
+            esac
+          done <<< "$(echo -e "$COMMITS_LOG")"
+
+          BODY="$NOTES_HEADER"
+          if [ -n "$FEATURES" ]; then
+            BODY="$BODY\n\n### ✨ New Features\n$FEATURES"
+          fi
+          if [ -n "$FIXES" ]; then
+            BODY="$BODY\n\n### 🐛 Bug Fixes\n$FIXES"
+          fi
+          if [ -n "$OTHER" ]; then
+            BODY="$BODY\n\n### 🔧 Changes\n$OTHER"
+          fi
+
+          BODY="${BODY//'%'/'%25'}"
+          BODY="${BODY//$'\n'/'%0A'}"
+          BODY="${BODY//$'\r'/'%0D'}"
+
+          echo "NOTES_BODY=$BODY" >> $GITHUB_ENV
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
           name: Release ${{ env.VERSION }}
+          body: ${{ env.NOTES_BODY }}
           draft: false
           prerelease: false
-          generate_release_notes: ${{ env.GENERATE_NOTES }}
           files: |
             speak2write-${{ env.VERSION }}-arm64-v8a.apk
             speak2write-${{ env.VERSION }}-armeabi-v7a.apk
