@@ -18,4 +18,9 @@
         <item name="android:scrollbarSize">4dp</item>
         <item name="android:fadeScrollbars">false</item>
     </style>
+
+    <style name="WindowNoAnimation">
+        <item name="android:windowEnterAnimation">@null</item>
+        <item name="android:windowExitAnimation">@null</item>
+    </style>
 </resources>

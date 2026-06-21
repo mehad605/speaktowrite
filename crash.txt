@@ -1,0 +1,410 @@
+--------- beginning of main
+06-21 16:22:33.768   736   902 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:59.569309,dur:1007.23,max:17.54,min:15.60  
+--------- beginning of system
+06-21 16:22:33.786  1576  2918 I ActivityManager: Force stopping com.mhm.speaktowrite appid=10420 user=0: from pid 10552
+06-21 16:22:33.789  1576  2918 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1143 com.android.server.am.OppoExtraActivityManagerService.setKeyLockModeNormal:51 com.android.server.am.ActivityManagerService.forceStopPackageLocked:5390 com.android.server.am.ActivityManagerService.forceStopPackageLocked:5230 com.android.server.am.ActivityManagerService.forceStopPackage:4979 
+06-21 16:22:33.791  1576  2918 I ActivityManager: Killing 10185:com.mhm.speaktowrite/u0a420 (adj 0): stop com.mhm.speaktowrite due to from pid 10552
+06-21 16:22:33.795  1576  2918 W ActivityTaskManager: Force removing ActivityRecord{5713748 u0 com.mhm.speaktowrite/.MainActivity t2010 f}}: app died, no saved state
+06-21 16:22:33.795   757   903 I libPowerHal: [perfNotifyAppState] pack:com.mhm.speaktowrite, pid:10185, STATE_DEAD
+06-21 16:22:33.825  1576  2918 W WindowManager: Changing focus fromWindow{720966a u0 com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity} to null displayId=0 Callers=com.android.server.wm.RootWindowContainer.updateFocusedWindowLocked:497 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:6036 com.android.server.wm.ActivityRecord.commitVisibility:4585 com.android.server.wm.ActivityRecord.onRemovedFromDisplay:3431 
+06-21 16:22:33.831  1576  2918 I OplusMirageDisplayManagerService: onAnimationFinished:
+06-21 16:22:33.834  1576  2919 I InputDispatcher: Focus left window: Window{720966a u0 com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity} in display 0
+06-21 16:22:33.834  1576  2919 I InputDispatcher: Window went away: Window{720966a u0 com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity}
+06-21 16:22:33.844  1576  2918 I InputDispatcher: setFocusedApplication displayId=0 <nullptr>
+06-21 16:22:33.850  1576  2918 I ColorHansManager : ColorHansManager : resume pkg: app.lawnchair, uid:10258, prev pkg: com.mhm.speaktowrite, prev uid: 10420
+06-21 16:22:33.850  1576  2456 I ColorHansManager : enter fastfreezer
+06-21 16:22:33.852  1576  2918 I InputDispatcher: setFocusedApplication displayId=0 ActivityRecord{73612f2 u0 app.lawnchair/.LawnchairLauncher t1899}
+06-21 16:22:33.853   757   903 I libPowerHal: [perfNotifyAppState] foreground:app.lawnchair, pid:3249, uid:10258
+06-21 16:22:33.854   757   903 E UxUtility: notifyAppState error = NULL
+06-21 16:22:33.854   757   903 I TouchUtility: notifyAppState error = NULL
+06-21 16:22:33.856   757   782 I mtkpower@impl: [notifyAppState] pc:0, com.mhm.speaktowrite => app.lawnchair
+06-21 16:22:33.862  7582  7618 I [10]DCS-StrategyManager: isNeedUpload: cache, appID: 20200, logTag: launch, eventID: launch
+06-21 16:22:33.862  1576  2456 I ColorHansManager : freeze uid: 10243 package: dev.imranr.obtainium.fdroid reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.863  1576  2456 I ColorHansManager : freeze uid: 10375 package: com.warden.app reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.863  2761  3221 W OppoGuardElf: ThermalControlUtils: mForegroundPkg=app.lawnchair
+06-21 16:22:33.864   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13221 hint:21 pid:757 duration:1 => ret_hdl:13221
+06-21 16:22:33.864   757   903 I libPowerHal: [PE] scn:0 hdl:13221 hint:21 comm:mtkpower@1.0-se pid:757
+06-21 16:22:33.864  1576  2456 I ColorHansManager : freeze uid: 10248 package: io.github.samolego.canta reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.864   757   903 I libPowerHal: MTKPOWER_HINT_PROCESS_CREATE: cpu_ctrl set cpu freq: 1800000 -1 2000000 -1
+06-21 16:22:33.864   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000, param:0
+06-21 16:22:33.864   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:2020000, param:15
+06-21 16:22:33.865   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:1410000, param:1
+06-21 16:22:33.865  1576  2456 I ColorHansManager : freeze uid: 10252 package: com.github.bmx666.appcachecleaner reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.865   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:1408300, param:100
+06-21 16:22:33.865   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000 param:0
+06-21 16:22:33.865   757   903 I mtkpower@impl: [powerd_req] TIMER_MSG_PERF_LOCK_TIMEOUT hdl:13221
+06-21 16:22:33.866  1576  2456 I ColorHansManager : freeze uid: 10257 package: com.aistra.hail reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.866   757   903 I libPowerHal: [perfLockRel] hdl:13221, idx:0
+06-21 16:22:33.866   757   903 I libPowerHal: [PD] scn:0 hdl:13221 hint:21 comm:mtkpower@1.0-se pid:757
+06-21 16:22:33.866   757   903 I libPowerHal: MTKPOWER_HINT_PROCESS_CREATE: cpu_ctrl set cpu freq: -1 -1 -1 -1
+06-21 16:22:33.866   757   903 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000, param:-1
+06-21 16:22:33.866   757   903 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:2020000 param:1
+06-21 16:22:33.866   757   903 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1410000 param:0
+06-21 16:22:33.866   757   903 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1408300 param:0
+06-21 16:22:33.866  1576  2456 I ColorHansManager : freeze uid: 10288 package: com.whatsapp reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.867   757   903 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000 param:-1
+06-21 16:22:33.867  1576  2456 I ColorHansManager : freeze uid: 10418 package: com.example.lockedsecure reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.867   757   903 I libPowerHal: [perfLockRel] hdl:13203, idx:-1
+06-21 16:22:33.868  1576  2456 I ColorHansManager : freeze uid: 10297 package: com.github.catfriend1.syncthingandroid reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.869  1576  2456 I ColorHansManager : freeze uid: 10299 package: com.facebook.orca reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.870  1576  2456 I ColorHansManager : freeze uid: 10302 package: app.revanced.android.gms reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.870  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 29245, target_uid = 10328, pkg_cmd = -1
+06-21 16:22:33.871  1576  2456 I ColorHansManager : freeze uid: 10326 package: app.morphe.manager reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.872 29751 29751 I GoogleTTSServiceImpl: Cache enabled: true
+06-21 16:22:33.872  1576  2456 I ColorHansManager : freeze uid: 10367 package: moe.shizuku.privileged.api reason: fastfreezer|10258 scene: FastFreezerScene
+06-21 16:22:33.874   768  1914 I BufferQueueProducer: [com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity#0](id:300000008a3,api:1,p:10185,c:768) disconnect(): api=1
+06-21 16:22:33.876  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 4266, target_uid = 10302, pkg_cmd = -1
+06-21 16:22:33.876  9473  9473 I Finsky:background: [2] Memory trim requested to level 40
+06-21 16:22:33.876   706   706 I Zygote  : Process 10185 exited due to signal 9 (Killed)
+06-21 16:22:33.877  7582  7618 E [10]DCS : getAppVersion--NameNotFoundException:android.content.pm.PackageManager$NameNotFoundException: app.lawnchair
+06-21 16:22:33.879  7582  7618 E [10]DCS : getAppVersionCode--NameNotFoundException:android.content.pm.PackageManager$NameNotFoundException: app.lawnchair
+06-21 16:22:33.881  1576  1622 I libprocessgroup: Successfully killed process cgroup uid 10420 pid 10185 in 86ms
+06-21 16:22:33.882  9321  9321 I Finsky  : [2] Memory trim requested to level 40
+06-21 16:22:33.882  9321  9321 I Finsky  : [2] Flushing in-memory image cache
+06-21 16:22:33.883  3249  3249 I FEED    : 1
+06-21 16:22:33.883  1576  2556 W WindowManager: Cannot find window which accessibility connection is added to
+06-21 16:22:33.883  3249  3249 I FEED    : 2
+06-21 16:22:33.883   768   768 I BufferQueueConsumer: [com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity#0](id:300000008a3,api:0,p:-1,c:768) disconnect()
+06-21 16:22:33.883   768   768 I BufferQueue: [com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity#0](this:0xb400007c1ef05458,id:2211,api:1,p:-1,c:-1) onDestructor()
+06-21 16:22:33.884  6069  6090 I GED     : ged_boost_gpu_freq, level 100, eOrigin 2, final_idx 31, oppidx_max 31, oppidx_min 0
+06-21 16:22:33.886 31188 31188 I InputTransport: Destroy ARC handle: 0xb4000079f95584e0
+06-21 16:22:33.886 31188 31188 I AppBase : AppBase.onTrimMemory():284 onTrimMemory(): 10
+06-21 16:22:33.886  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 19254, target_uid = 10367, pkg_cmd = -1
+06-21 16:22:33.887  1576  2918 I ActivityManager: Force stopping com.mhm.speaktowrite appid=10420 user=10: from pid 10552
+06-21 16:22:33.887 31188 31188 I KeyboardDefCache: MemoryFileCache$1.onTrimMemory():124 clearMemory() for trim memory: 10
+06-21 16:22:33.887  1576  2918 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1143 com.android.server.am.OppoExtraActivityManagerService.setKeyLockModeNormal:51 com.android.server.am.ActivityManagerService.forceStopPackageLocked:5390 com.android.server.am.ActivityManagerService.forceStopPackageLocked:5230 com.android.server.am.ActivityManagerService.forceStopPackage:4979 
+06-21 16:22:33.887 31188 31188 I KeyboardDefCache: MemoryFileCache.clearMemory():408 evictAll()
+06-21 16:22:33.887 31188 31188 I GoogleInputMethodService: GoogleInputMethodService.onTrimMemory():3002 onTrimMemory(): 10
+06-21 16:22:33.888  7582  7618 I [10]DCS-BackgroundAppData: sendAppBgEvent: has no pkgName=app.lawnchair
+06-21 16:22:33.888  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 10369, target_uid = 10257, pkg_cmd = -1
+06-21 16:22:33.890  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 10339, target_uid = 10248, pkg_cmd = -1
+06-21 16:22:33.892  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 10333, target_uid = 10326, pkg_cmd = -1
+06-21 16:22:33.894  1576  2556 I ActivityManager: Killing 10074:com.google.android.googlequicksearchbox:googleapp/u0a135 (adj 935): 117344k from cached
+06-21 16:22:33.894  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 2286, target_uid = 10299, pkg_cmd = -1
+06-21 16:22:33.895  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 8472, target_uid = 10302, pkg_cmd = -1
+06-21 16:22:33.897  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 7509, target_uid = 10302, pkg_cmd = -1
+06-21 16:22:33.898  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 6646, target_uid = 10288, pkg_cmd = -1
+06-21 16:22:33.899  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 8155, target_uid = 10297, pkg_cmd = -1
+06-21 16:22:33.902  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 2581, target_uid = 10243, pkg_cmd = -1
+06-21 16:22:33.905  1576  2556 W ActivityManager: Application dead when creating service ServiceRecord{e4d6044 u0 com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService}
+06-21 16:22:33.906  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 22623, target_uid = 10418, pkg_cmd = -1
+06-21 16:22:33.907  1576  2556 W ActivityManager: Scheduling restart of crashed service com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService in 1500ms for connection
+06-21 16:22:33.909   757   903 I libPowerHal: [perfNotifyAppState] pack:com.google.android.googlequicksearchbox, pid:10074, STATE_DEAD
+06-21 16:22:33.909  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 22335, target_uid = 10252, pkg_cmd = -1
+06-21 16:22:33.912  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:33.914  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:33.918  1576  2556 W ActivityManager: Scheduling restart of crashed service com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService in 6000ms for always
+06-21 16:22:33.918   768   881 I BufferQueueProducer: [StatusBar#0](this:0xb400007c1f92fa58,id:7,api:1,p:2036,c:768) queueBuffer: fps=0.40 dur=2506.17 max=2506.17 min=2506.17
+06-21 16:22:33.923  1576  2556 W ActivityManager: Exception when starting service com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService
+06-21 16:22:33.923  1576  2556 W ActivityManager: android.os.DeadObjectException
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.os.BinderProxy.transactNative(Native Method)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.os.BinderProxy.transact(BinderProxy.java:573)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.app.IApplicationThread$Stub$Proxy.scheduleCreateService(IApplicationThread.java:1643)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.ActiveServices.realStartServiceLocked(ActiveServices.java:3430)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.ActiveServices.bringUpServiceLocked(ActiveServices.java:3288)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.ActiveServices.bindServiceLocked(ActiveServices.java:2364)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.ActivityManagerService.bindIsolatedService(ActivityManagerService.java:16211)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.app.IActivityManager$Stub.onTransact(IActivityManager.java:2645)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.ActivityManagerService.onTransact(ActivityManagerService.java:3180)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at com.android.server.am.OppoActivityManagerService.onTransact(OppoActivityManagerService.java:169)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.os.Binder.execTransactInternal(Binder.java:1161)
+06-21 16:22:33.923  1576  2556 W ActivityManager: 	at android.os.Binder.execTransact(Binder.java:1130)
+06-21 16:22:33.924  1576  1576 I OppoPhoneWindowManager: KeyLockModeReceiver KeyLockMode: 0 ProcessName: com.mhm.speaktowrite
+06-21 16:22:33.927   705  2173 I netd    : firewallSetUidRule(4, 10328, 1) <0.04ms>
+06-21 16:22:33.928  1576  1626 I ColorHansManager : unfreeze uid: 10328 package: anddea.youtube reason: Broadcast scene: FastFreezerScene
+06-21 16:22:33.930  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 29245, target_uid = 10328, pkg_cmd = -1
+06-21 16:22:33.941  1576  3799 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.mhm.speaktowrite/.MainActivity mCallingUid=2000} from uid 2000 and from pid 10560
+06-21 16:22:33.942  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13220, dur:0, num:6, tid:1833
+06-21 16:22:33.943  1576  3799 E ColorZoomWindowManagerService: onConfigurationChanged rotation not changed - prevRotation: 0
+06-21 16:22:33.943  1576  1833 I mtkpower_client: ret_hdl:13222
+06-21 16:22:33.944   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13222 hint:-1 pid:1576 duration:0 => ret_hdl:13222
+06-21 16:22:33.944   757   903 I libPowerHal: [PE] scn:0 hdl:13222 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:33.944   757   903 I libPowerHal: system_server: cpu_ctrl set cpu freq: 1800000 -1 1532000 -1
+06-21 16:22:33.946  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13222, tid:1833
+06-21 16:22:33.946  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13222, dur:0, num:6, tid:1833
+06-21 16:22:33.947   757   903 I libPowerHal: [perfLockRel] hdl:13222, idx:0
+06-21 16:22:33.947   757   903 I libPowerHal: [PD] scn:0 hdl:13222 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:33.947  1576  3799 E ColorZoomWindowManagerService: onConfigurationChanged rotation not changed - prevRotation: 0
+06-21 16:22:33.947   757   903 I libPowerHal: system_server: cpu_ctrl set cpu freq: -1 -1 -1 -1
+06-21 16:22:33.948  1576  1833 I mtkpower_client: ret_hdl:13223
+06-21 16:22:33.948   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13223 hint:-1 pid:1576 duration:0 => ret_hdl:13223
+06-21 16:22:33.948   757   903 I libPowerHal: [PE] scn:0 hdl:13223 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:33.948   757   903 I libPowerHal: system_server: cpu_ctrl set cpu freq: 1800000 -1 1532000 -1
+06-21 16:22:33.951   757   784 I mtkpower@impl: [setMode] type:5, enabled:1
+06-21 16:22:33.951   757   903 I libPowerHal: [perfLockAcq] idx:1 hdl:13224 hint:11 pid:757 duration:30000 => ret_hdl:13224
+06-21 16:22:33.951   757   903 I libPowerHal: [PE] scn:1 hdl:13224 hint:11 comm:mtkpower@1.0-se pid:757
+06-21 16:22:33.952   757   903 I libPowerHal: LAUNCH: cpu_ctrl set cpu freq: 1800000 -1 2000000 -1
+06-21 16:22:33.952   757   903 I libPowerHal: [PE] LAUNCH update cmd:1000000, param:0
+06-21 16:22:33.952   757   903 I libPowerHal: [PE] LAUNCH update cmd:1408300, param:100
+06-21 16:22:33.952   757   903 I libPowerHal: [PE] LAUNCH update cmd:1000000 param:0
+06-21 16:22:33.953   757   903 I libPowerHal: [perfLockRel] hdl:13204, idx:-1
+06-21 16:22:33.954   757   903 I libPowerHal: [perfLockAcq] idx:2 hdl:13225 hint:22 pid:757 duration:10000 => ret_hdl:13225
+06-21 16:22:33.954   757   903 I libPowerHal: [PE] scn:2 hdl:13225 hint:22 comm:mtkpower@1.0-se pid:757
+06-21 16:22:33.963  1576  1603 W Looper  : Slow dispatch took 172ms android.ui h=com.android.server.am.ActivityManagerService$UiHandler c=null m=53
+06-21 16:22:33.964 10563 10563 E chbox:googleap: Unknown bits set in runtime_flags: 0x40000000
+06-21 16:22:33.967 10563 10563 E chbox:googleap: Not starting debugger since process cannot load the jdwp agent.
+06-21 16:22:33.971   768   882 I SurfaceFlinger: [SF client] NEW(0xb400007c297d0780) for (1576:system_server)
+06-21 16:22:33.972  2761  3221 W OppoGuardElf: ThermalControllHandler: tempLevel=5,userMode=2,gameUserMode=-1,appType=-1,envTempType=0,appStates=[]
+06-21 16:22:33.976 10563 10563 E RefClass: java.lang.reflect.InvocationTargetException
+06-21 16:22:33.977   706   706 I Zygote  : Process 10074 exited due to signal 9 (Killed)
+06-21 16:22:33.977  2761  3221 W OppoGuardElf: ThermalControlUtils: mForegroundPkg=app.lawnchair
+06-21 16:22:33.977  2761  3221 W OppoGuardElf: ThermalControllHandler: tempGear=5,configItemName=common_config
+06-21 16:22:33.977  2761  4438 W OppoGuardElf: ThermalControllHandler: MSG_THERMAL_CONTROL_CATEGORY_CHANGED
+06-21 16:22:33.981  1576  1622 I libprocessgroup: Successfully killed process cgroup uid 10135 pid 10074 in 85ms
+06-21 16:22:33.989  1576  1621 W ActivityManager: Slow operation: 51ms so far, now at startProcess: done updating battery stats
+06-21 16:22:33.990  1576  1621 W ActivityManager: Slow operation: 52ms so far, now at startProcess: building log message
+06-21 16:22:33.990  1576  1621 I ActivityManager: Start proc 10563:com.google.android.googlequicksearchbox:googleapp/u0a135 for service {com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService}
+06-21 16:22:33.990  1576  1621 W ActivityManager: Slow operation: 52ms so far, now at startProcess: starting to update pids map
+06-21 16:22:33.991  1576  1606 E libEGL  : Invalid file path for libcolorx-loader.so
+06-21 16:22:33.992  1576  1621 W ActivityManager: Slow operation: 54ms so far, now at startProcess: done updating pids map
+06-21 16:22:33.992  1576  1606 I chatty  : uid=1000(system) android.anim identical 4 lines
+06-21 16:22:33.992  1576  1606 E libEGL  : Invalid file path for libcolorx-loader.so
+06-21 16:22:33.992  1576  1606 I InputTransport: Create ARC handle: 0xb4000079e4328420
+06-21 16:22:33.999   768  1390 I BufferQueueConsumer: [](id:300000008a6,api:0,p:-1,c:768) connect(): controlledByApp=false
+06-21 16:22:34.000   768  1390 I BufferQueue: [unnamed-768-2214](this:0xb400007c3e15b258,id:2214,api:0,p:-1,c:-1) BufferQueue core=(768:/system/bin/surfaceflinger)
+06-21 16:22:34.002  1576  3328 I WindowManager: Relayout Window{194d8b2 u0 app.lawnchair/app.lawnchair.LawnchairLauncher}: oldVis=4 newVis=0 focusMayChange = true
+06-21 16:22:34.005   768   881 I BufferQueueConsumer: [](id:300000008a7,api:0,p:-1,c:768) connect(): controlledByApp=false
+06-21 16:22:34.005   768   881 I BufferQueue: [unnamed-768-2215](this:0xb400007c3e08b858,id:2215,api:0,p:-1,c:-1) BufferQueue core=(768:/system/bin/surfaceflinger)
+06-21 16:22:34.007  1576  3328 W WindowManager: Changing focus fromnull to Window{194d8b2 u0 app.lawnchair/app.lawnchair.LawnchairLauncher} displayId=0 Callers=com.android.server.wm.RootWindowContainer.updateFocusedWindowLocked:497 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:6036 com.android.server.wm.WindowManagerService.relayoutWindow:2682 com.android.server.wm.Session.relayout:229 
+06-21 16:22:34.012   768  1390 I BufferQueueProducer: [Splash Screen com.mhm.speaktowrite#0](id:300000008a6,api:2,p:1576,c:768) connect(): api=2 producerControlledByApp=false
+06-21 16:22:34.013   768   881 I BufferQueueProducer: [app.lawnchair/app.lawnchair.LawnchairLauncher#0](id:300000008a7,api:1,p:3249,c:768) connect(): api=1 producerControlledByApp=false
+06-21 16:22:34.014  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13223, tid:1833
+06-21 16:22:34.014  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13223, dur:0, num:10, tid:1833
+06-21 16:22:34.015   757   903 I libPowerHal: [perfLockRel] hdl:13223, idx:0
+06-21 16:22:34.015   757   903 I libPowerHal: [PD] scn:0 hdl:13223 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.016  1576  1833 I mtkpower_client: ret_hdl:13226
+06-21 16:22:34.016   757   903 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+06-21 16:22:34.016   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13226 hint:-1 pid:1576 duration:0 => ret_hdl:13226
+06-21 16:22:34.016   757   903 I libPowerHal: [PE] scn:0 hdl:13226 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.016   757   903 I libPowerHal: [PE] system_server update cmd:1410000, param:1
+06-21 16:22:34.019 10563 10581 W OplusExSystemServiceHelper: checkOplusExSystemService intent getComponent is null
+06-21 16:22:34.021 10563 10563 I oplus.android.OplusFrameworkFactoryImpl: get feature:IOplusScreenModeFeature
+06-21 16:22:34.021 10563 10563 I oplus.android.OplusFrameworkFactoryImpl: getOplusScreenModeFeature
+06-21 16:22:34.035  1576  2919 I InputDispatcher: Window went away: Splash Screen com.mhm.speaktowrite#0
+06-21 16:22:34.037  1576  1605 W ActivityManager: setHasOverlayUi called on unknown pid: 10185
+06-21 16:22:34.039  1576  1576 I OppoPhoneWindowManager: KeyLockModeReceiver KeyLockMode: 0 ProcessName: com.mhm.speaktowrite
+06-21 16:22:34.039 10563 10563 I chbox:googleap: The ClassLoaderContext is a special shared library.
+06-21 16:22:34.040   757   903 I libPowerHal: [perfLockAcq] idx:3 hdl:13227 hint:21 pid:757 duration:10000 => ret_hdl:13227
+06-21 16:22:34.040   757   903 I libPowerHal: [PE] scn:3 hdl:13227 hint:21 comm:mtkpower@1.0-se pid:757
+06-21 16:22:34.040   757   903 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:2020000, param:15
+06-21 16:22:34.041   757   903 I libPowerHal: [perfLockRel] hdl:13221, idx:-1
+06-21 16:22:34.044  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.046  4466  4485 I chatty  : uid=1000(system) /system_ext/bin/hans identical 2 lines
+06-21 16:22:34.047  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.048  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 22623, target_uid = 10418, pkg_cmd = -1
+06-21 16:22:34.051  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.053  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.053   997  1013 E OpenID  : com.coloros.gamespace:GUID:ret:T
+06-21 16:22:34.054  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 22623, target_uid = 10418, pkg_cmd = -1
+06-21 16:22:34.056  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.057  4466  4485 E IHansComunication: HANS printMessageBody: RCVed message body: type = 0, port = 86870, caller_pid = 1576, caller_uid = 1000, target_pid = 21556, target_uid = 10375, pkg_cmd = -1
+06-21 16:22:34.069  1576  1621 I ActivityManager: Start proc 10584:com.mhm.speaktowrite/u0a420 for pre-top-activity {com.mhm.speaktowrite/com.mhm.speaktowrite.MainActivity}
+06-21 16:22:34.072 10584 10584 I hm.speaktowrit: Late-enabling -Xcheck:jni
+06-21 16:22:34.089  2036  2036 I OplusWallpaperServiceHelper: getDarkModeWallpaperWindowAlpha. nightMode = true
+06-21 16:22:34.098 10584 10584 I hm.speaktowrit: Unquickening 22 vdex files!
+06-21 16:22:34.098  3249  3249 W SplitSelectStateCtor: Missing session instanceIds
+06-21 16:22:34.099 10584 10584 E hm.speaktowrit: Unknown bits set in runtime_flags: 0x40000000
+06-21 16:22:34.102  1576  3328 I ColorHansManager : ColorHansManager : resume pkg: com.mhm.speaktowrite, uid:10420, prev pkg: app.lawnchair, prev uid: 10258
+06-21 16:22:34.102  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13226, tid:1833
+06-21 16:22:34.103  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13226, dur:0, num:10, tid:1833
+06-21 16:22:34.103   757   782 I mtkpower@impl: [check_work_req] i:0, msg:1 hdl:13226, wait
+06-21 16:22:34.103  2036  2036 I OplusWallpaperServiceHelper: getDarkModeWallpaperWindowAlpha. nightMode = true
+06-21 16:22:34.104  9268  9277 I adbd    : jdwp connection from 10584
+06-21 16:22:34.104   757   903 I libPowerHal: [perfLockRel] hdl:13226, idx:0
+06-21 16:22:34.104   757   903 I libPowerHal: [PD] scn:0 hdl:13226 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.106  1576  1833 I mtkpower_client: ret_hdl:13228
+06-21 16:22:34.106   757   903 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+06-21 16:22:34.106   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13228 hint:-1 pid:1576 duration:0 => ret_hdl:13228
+06-21 16:22:34.106   757   903 I libPowerHal: [PE] scn:0 hdl:13228 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.106  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13228, tid:1833
+06-21 16:22:34.107  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13228, dur:0, num:10, tid:1833
+06-21 16:22:34.108   757   903 I libPowerHal: [perfLockRel] hdl:13228, idx:0
+06-21 16:22:34.108   757   903 I libPowerHal: [PD] scn:0 hdl:13228 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.109  1576  1833 I mtkpower_client: ret_hdl:13229
+06-21 16:22:34.109   757   903 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+06-21 16:22:34.109   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13229 hint:-1 pid:1576 duration:0 => ret_hdl:13229
+06-21 16:22:34.109   757   903 I libPowerHal: [PE] scn:0 hdl:13229 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.110  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13229, tid:1833
+06-21 16:22:34.110  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13229, dur:0, num:10, tid:1833
+06-21 16:22:34.110   757   903 I libPowerHal: [perfLockRel] hdl:13229, idx:0
+06-21 16:22:34.110   757   903 I libPowerHal: [PD] scn:0 hdl:13229 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.111  1576  1833 I mtkpower_client: ret_hdl:13230
+06-21 16:22:34.111   757   903 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+06-21 16:22:34.111   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13230 hint:-1 pid:1576 duration:0 => ret_hdl:13230
+06-21 16:22:34.111   757   903 I libPowerHal: [PE] scn:0 hdl:13230 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.113   757   782 I mtkpower@impl: [mtkPowerHint] hint:21, hold:6000, ext:30, ext_hold:35000
+06-21 16:22:34.113   757   903 I libPowerHal: [perfLockRel] hdl:13225, idx:2
+06-21 16:22:34.113   757   903 I libPowerHal: [PD] scn:2 hdl:13225 hint:22 comm:mtkpower@1.0-se pid:757
+06-21 16:22:34.114   757   903 I libPowerHal: [perfLockAcq] idx:4 hdl:13231 hint:21 pid:757 duration:6000 => ret_hdl:13231
+06-21 16:22:34.114   757   903 I libPowerHal: [PE] scn:4 hdl:13231 hint:21 comm:mtkpower@1.0-se pid:757
+06-21 16:22:34.114   757   903 I libPowerHal: [perfLockRel] hdl:13227, idx:3
+06-21 16:22:34.114   757   903 I libPowerHal: [PD] scn:3 hdl:13227 hint:21 comm:mtkpower@1.0-se pid:757
+06-21 16:22:34.115   757   903 I libPowerHal: [perfLockAcq] idx:2 hdl:13232 hint:30 pid:757 duration:35000 => ret_hdl:13232
+06-21 16:22:34.115 10584 10584 E RefClass: java.lang.reflect.InvocationTargetException
+06-21 16:22:34.115   757   903 I libPowerHal: [PE] scn:2 hdl:13232 hint:30 comm:mtkpower@1.0-se pid:757
+06-21 16:22:34.130  1576  3329 I ColorAppSwitchManagerService: appswitch hasProcess ActivityRecord{61631e0 u0 com.mhm.speaktowrite/.MainActivity t2011}
+06-21 16:22:34.130  1576  3329 I ColorAppSwitchManagerService: appswitch hasProcess ActivityRecord{61631e0 u0 com.mhm.speaktowrite/.MainActivity t2011}
+06-21 16:22:34.130  1576  1833 I mtkpower_client: perf_lock_rel, hdl:13230, tid:1833
+06-21 16:22:34.131  1576  1833 I mtkpower_client: perf_lock_acq, hdl:13230, dur:0, num:10, tid:1833
+06-21 16:22:34.131   757   903 I libPowerHal: [perfNotifyAppState] foreground:com.mhm.speaktowrite, pid:10584, uid:10420
+06-21 16:22:34.131  1576  3329 I InputDispatcher: setFocusedApplication displayId=0 ActivityRecord{61631e0 u0 com.mhm.speaktowrite/.MainActivity t2011}
+06-21 16:22:34.131   757   903 E UxUtility: notifyAppState error = NULL
+06-21 16:22:34.131   757   903 I TouchUtility: notifyAppState error = NULL
+06-21 16:22:34.132   757   782 I mtkpower@impl: [notifyAppState] pc:0, app.lawnchair => com.mhm.speaktowrite
+06-21 16:22:34.132   757   903 I libPowerHal: [perfLockRel] hdl:13230, idx:0
+06-21 16:22:34.132   757   903 I libPowerHal: [PD] scn:0 hdl:13230 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.133  2761  3220 W OppoGuardElf: ThermalControlUtils: mForegroundPkg=com.mhm.speaktowrite
+06-21 16:22:34.133  1576  1833 I mtkpower_client: ret_hdl:13233
+06-21 16:22:34.134   757   903 I libPowerHal: cmdSetting - unknown cmd:1c3c000, scmd:(null) ,param_1:0
+06-21 16:22:34.134   757   903 I libPowerHal: [perfLockAcq] idx:0 hdl:13233 hint:-1 pid:1576 duration:0 => ret_hdl:13233
+06-21 16:22:34.134   757   903 I libPowerHal: [PE] scn:0 hdl:13233 lock_user:system_server pid:1576 tid:1833 dur:0
+06-21 16:22:34.135  7582  7618 I [10]DCS-BackgroundAppData: sendAppBgEvent: has no pkgName=com.mhm.speaktowrite
+06-21 16:22:34.135  1576  3329 W WindowManager: Changing focus fromWindow{194d8b2 u0 app.lawnchair/app.lawnchair.LawnchairLauncher} to null displayId=0 Callers=com.android.server.wm.RootWindowContainer.updateFocusedWindowLocked:497 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:6036 com.android.server.wm.DisplayContent.setFocusedApp:5856 com.android.server.wm.ActivityTaskManagerService.setResumedActivityUncheckLocked:5843 
+06-21 16:22:34.136  7582  7618 W System.err: android.content.pm.PackageManager$NameNotFoundException: app.lawnchair
+06-21 16:22:34.136  7582  7618 W System.err: 	at android.app.ApplicationPackageManager.getApplicationInfoAsUser(ApplicationPackageManager.java:461)
+06-21 16:22:34.136  7582  7618 W System.err: 	at android.app.ApplicationPackageManager.getApplicationInfo(ApplicationPackageManager.java:450)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.c.j.i.o(Utils.java:2)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.usermodel.a.h(BackgroundAppData.java:2)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.usermodel.i.h(UserModelHelper.java:1)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.d.d(BroadcastMsgHandler.java:8)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.d.b(BroadcastMsgHandler.java:6)
+06-21 16:22:34.136  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.c.handleMessage(BaseMsgHandler.java:8)
+06-21 16:22:34.136  7582  7618 W System.err: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+06-21 16:22:34.136  7582  7618 W System.err: 	at android.os.Looper.loop(Looper.java:255)
+06-21 16:22:34.136  7582  7618 W System.err: 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-21 16:22:34.144 10563 10563 W chbox:googleap: JIT profile information will not be recorded: profile file does not exist.
+06-21 16:22:34.144 10563 10563 W chbox:googleap: JIT profile information will not be recorded: profile file does not exist.
+06-21 16:22:34.149 10584 10584 I oplus.android.OplusFrameworkFactoryImpl: get feature:IOplusScreenModeFeature
+06-21 16:22:34.149 10584 10584 I oplus.android.OplusFrameworkFactoryImpl: getOplusScreenModeFeature
+06-21 16:22:34.167  7582  7618 W System.err: android.content.pm.PackageManager$NameNotFoundException: app.lawnchair
+06-21 16:22:34.167  7582  7618 W System.err: 	at android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:238)
+06-21 16:22:34.167  7582  7618 W System.err: 	at android.app.ApplicationPackageManager.getPackageInfo(ApplicationPackageManager.java:207)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.c.j.i.b(Utils.java:2)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.usermodel.a.o(BackgroundAppData.java:3)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.usermodel.a.h(BackgroundAppData.java:15)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.usermodel.i.h(UserModelHelper.java:1)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.d.d(BroadcastMsgHandler.java:8)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.d.b(BroadcastMsgHandler.java:6)
+06-21 16:22:34.167  7582  7618 W System.err: 	at com.nearme.statistics.rom.d.c.handleMessage(BaseMsgHandler.java:8)
+06-21 16:22:34.167  7582  7618 W System.err: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+06-21 16:22:34.167  7582  7618 W System.err: 	at android.os.Looper.loop(Looper.java:255)
+06-21 16:22:34.167  7582  7618 W System.err: 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-21 16:22:34.170  2761  3220 W OppoGuardElf: ThermalControllHandler: tempLevel=5,userMode=2,gameUserMode=-1,appType=-1,envTempType=0,appStates=[]
+06-21 16:22:34.172  2761  3220 W OppoGuardElf: ThermalControlUtils: mForegroundPkg=com.mhm.speaktowrite
+06-21 16:22:34.173  2761  3220 W OppoGuardElf: ThermalControllHandler: tempGear=5,configItemName=common_config
+06-21 16:22:34.173  2761  4438 W OppoGuardElf: ThermalControllHandler: MSG_THERMAL_CONTROL_CATEGORY_CHANGED
+06-21 16:22:34.189   768   768 I BufferQueueProducer: [FramebufferSurface](this:0xb400007c2942eed0,id:-1,api:1,p:768,c:768) queueBuffer: fps=0.11 dur=104700.86 max=104525.34 min=14.12
+06-21 16:22:34.192   705 10614 I resolv  : resolv_cache_lookup: lookup
+06-21 16:22:34.192   705 10614 I resolv  : resolv_cache_lookup: FOUND IN CACHE entry=0xb400006fa60293c0
+06-21 16:22:34.194 18489 10609 I System.out: [socket]:check permission begin!
+06-21 16:22:34.194   705 10615 I resolv  : resolv_cache_lookup: lookup
+06-21 16:22:34.194   705 10615 I resolv  : resolv_cache_lookup: FOUND IN CACHE entry=0xb400006fa60293c0
+06-21 16:22:34.195 18489 10611 I System.out: [socket]:check permission begin!
+06-21 16:22:34.196 18489 10616 I System.out: [socket]:check permission begin!
+06-21 16:22:34.198 18489 10613 I System.out: [socket]:check permission begin!
+06-21 16:22:34.201 18489 10613 I System.out: [socket]:check permission begin!
+06-21 16:22:34.232 10563 10563 I epwg    : SslGuard completed installation.
+06-21 16:22:34.255 24420 27192 W OplusExSystemServiceHelper: checkOplusExSystemService intent getComponent is null
+06-21 16:22:34.259 10563 10563 I daoh    : Initializing GMS Compliance Client Library...
+06-21 16:22:34.259 10563 10563 I daoh    : Checking for device compliance...
+06-21 16:22:34.259 10563 10563 I daoh    : Completed library init.
+06-21 16:22:34.265 10563 10563 I fnpj    : (REDACTED) Scoped context discovery schemas: %s.
+06-21 16:22:34.268 10563 10563 E byno    : Only system and debuggable apps are allowed to connect
+06-21 16:22:34.269 10563 10563 W byno    : Unable to bind to service
+06-21 16:22:34.309  2872 28369 W PhBaseOp: Phenotype API error. Event: # hvhx@adb87a75, EventCode: COMMIT_CONFIG [CONTEXT service_id=51 ]
+06-21 16:22:34.309  2872 28369 W PhBaseOp: ebhe: 29547: Stale snapshot for com.google.android.apps.search.policy#com.google.android.googlequicksearchbox(new configuration available)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at ebjh.d(:com.google.android.gms@262233022@26.22.33 (150400-932714197):454)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at ebjh.b(:com.google.android.gms@262233022@26.22.33 (150400-932714197):44)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at ebjg.i(:com.google.android.gms@262233022@26.22.33 (150400-932714197):3)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at ebjc.h(:com.google.android.gms@262233022@26.22.33 (150400-932714197):34)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at ebjc.f(:com.google.android.gms@262233022@26.22.33 (150400-932714197):16)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at cuox.fG(:com.google.android.gms@262233022@26.22.33 (150400-932714197):1)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at cupi.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):121)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at fvsu.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):23)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at bgzg.c(:com.google.android.gms@262233022@26.22.33 (150400-932714197):50)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at bgzg.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):66)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at bhey.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):8)
+06-21 16:22:34.309  2872 28369 W PhBaseOp: 	at java.lang.Thread.run(Thread.java:923)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: operation=CommitToConfigurationOperationCall, opStatusCode=29547 [CONTEXT service_id=51 ]
+06-21 16:22:34.310  2872 28369 W AsyncOperation: OperationException[Status{statusCode=Stale snapshot for com.google.android.apps.search.policy#com.google.android.googlequicksearchbox(new configuration available), resolution=null}]
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at ebjc.h(:com.google.android.gms@262233022@26.22.33 (150400-932714197):64)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at ebjc.f(:com.google.android.gms@262233022@26.22.33 (150400-932714197):16)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at cuox.fG(:com.google.android.gms@262233022@26.22.33 (150400-932714197):1)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at cupi.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):121)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at fvsu.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):23)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at bgzg.c(:com.google.android.gms@262233022@26.22.33 (150400-932714197):50)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at bgzg.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):66)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at bhey.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):8)
+06-21 16:22:34.310  2872 28369 W AsyncOperation: 	at java.lang.Thread.run(Thread.java:923)
+06-21 16:22:34.354  1576  1606 I ColorAppSwitchManagerService:  handleAppVisible , r = ActivityRecord{61631e0 u0 com.mhm.speaktowrite/.MainActivity t2011}
+06-21 16:22:34.354  1576  1606 I OplusMirageDisplayManagerService: onAnimationFinished:
+06-21 16:22:34.371  2872 28369 W PhBaseOp: Phenotype API error. Event: # hvhx@cc0f92ff, EventCode: COMMIT_CONFIG [CONTEXT service_id=51 ]
+06-21 16:22:34.371  2872 28369 W PhBaseOp: ebhe: 29547: Stale snapshot for com.google.android.libraries.consentverifier#com.google.android.googlequicksearchbox(new configuration available)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at ebjh.d(:com.google.android.gms@262233022@26.22.33 (150400-932714197):454)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at ebjh.b(:com.google.android.gms@262233022@26.22.33 (150400-932714197):44)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at ebjg.i(:com.google.android.gms@262233022@26.22.33 (150400-932714197):3)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at ebjc.h(:com.google.android.gms@262233022@26.22.33 (150400-932714197):34)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at ebjc.f(:com.google.android.gms@262233022@26.22.33 (150400-932714197):16)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at cuox.fG(:com.google.android.gms@262233022@26.22.33 (150400-932714197):1)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at cupi.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):121)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at fvsu.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):23)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at bgzg.c(:com.google.android.gms@262233022@26.22.33 (150400-932714197):50)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at bgzg.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):66)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at bhey.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):8)
+06-21 16:22:34.371  2872 28369 W PhBaseOp: 	at java.lang.Thread.run(Thread.java:923)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: operation=CommitToConfigurationOperationCall, opStatusCode=29547 [CONTEXT service_id=51 ]
+06-21 16:22:34.372  2872 28369 W AsyncOperation: OperationException[Status{statusCode=Stale snapshot for com.google.android.libraries.consentverifier#com.google.android.googlequicksearchbox(new configuration available), resolution=null}]
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at ebjc.h(:com.google.android.gms@262233022@26.22.33 (150400-932714197):64)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at ebjc.f(:com.google.android.gms@262233022@26.22.33 (150400-932714197):16)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at cuox.fG(:com.google.android.gms@262233022@26.22.33 (150400-932714197):1)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at cupi.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):121)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at fvsu.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):23)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at bgzg.c(:com.google.android.gms@262233022@26.22.33 (150400-932714197):50)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at bgzg.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):66)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at bhey.run(:com.google.android.gms@262233022@26.22.33 (150400-932714197):8)
+06-21 16:22:34.372  2872 28369 W AsyncOperation: 	at java.lang.Thread.run(Thread.java:923)
+06-21 16:22:34.386 10563 10629 I daoh    : (REDACTED) Device Compliance Fetch time taken = %sms
+06-21 16:22:34.386 10563 10629 I daoh    : Device is compliant!
+06-21 16:22:34.389 10563 10629 I daoh    : Invoking "compliant" action...
+06-21 16:22:34.406  1170  1170 I thermal_repeater: [recvMdThermalInfo] ret=33, strLen=127,  3, 45, -50, 25457, 32767, -28532
+06-21 16:22:35.374  1576  2456 I ColorHansManager : unfreeze uid: 10288 package: com.whatsapp reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.375  1576  2456 I ColorHansManager : unfreeze uid: 10297 package: com.github.catfriend1.syncthingandroid reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.377  1576  2456 I ColorHansManager : unfreeze uid: 10299 package: com.facebook.orca reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.378  1576  2456 I ColorHansManager : unfreeze uid: 10418 package: com.example.lockedsecure reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.379  1576  2456 I ColorHansManager : uid: 10418, state: M -> D
+06-21 16:22:35.380  1576  2456 I ColorHansManager : unfreeze uid: 10375 package: com.warden.app reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.381  1576  2456 I ColorHansManager : uid: 10375, state: M -> D
+06-21 16:22:35.381  1576  2456 I ColorHansManager : unfreeze uid: 10367 package: moe.shizuku.privileged.api reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.382  1576  2456 I ColorHansManager : uid: 10367, state: M -> D
+06-21 16:22:35.383  1576  2456 I ColorHansManager : unfreeze uid: 10326 package: app.morphe.manager reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.385  1576  2456 I ColorHansManager : unfreeze uid: 10302 package: app.revanced.android.gms reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.386  1576  2456 I ColorHansManager : uid: 10302, state: M -> D
+06-21 16:22:35.386  1576  2456 I ColorHansManager : unfreeze uid: 10257 package: com.aistra.hail reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.388  1576  2456 I ColorHansManager : unfreeze uid: 10252 package: com.github.bmx666.appcachecleaner reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.388  1576  2456 I ColorHansManager : uid: 10252, state: M -> D
+06-21 16:22:35.389  1576  2554 E ClipboardService: Denying clipboard access to app.lawnchair, application is not in focus nor is it a system service for user 0
+06-21 16:22:35.389  1576  2456 I ColorHansManager : unfreeze uid: 10248 package: io.github.samolego.canta reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.390  1576  2456 I ColorHansManager : unfreeze uid: 10243 package: dev.imranr.obtainium.fdroid reason: F-timeout scene: FastFreezerScene
+06-21 16:22:35.391  1576  2456 I ColorHansManager : uid: 10243, state: M -> D
+06-21 16:22:35.392  1576  2456 I ColorHansManager : exit fastfreezer, reason:F-timeout
+06-21 16:22:35.393  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: dev.imranr.obtainium.fdroid, reason: lastResumeProtect
+06-21 16:22:35.394  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: com.warden.app, reason: lastResumeProtect
+06-21 16:22:35.394  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: io.github.samolego.canta, reason: lastResumeProtect
+06-21 16:22:35.395  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: com.github.bmx666.appcachecleaner, reason: lastResumeProtect
+06-21 16:22:35.395  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: com.aistra.hail, reason: lastResumeProtect
+06-21 16:22:35.396  2286  2818 I GED     : ged_boost_gpu_freq, level 100, eOrigin 2, final_idx 31, oppidx_max 31, oppidx_min 0
+06-21 16:22:35.396  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: com.example.lockedsecure, reason: lastResumeProtect
+06-21 16:22:35.397  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: com.mhm.speaktowrite, reason: top
+06-21 16:22:35.397  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: app.revanced.android.gms, reason: lastResumeProtect
+06-21 16:22:35.398  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: app.morphe.manager, reason: lastResumeProtect
+06-21 16:22:35.399  1576  2457 I ColorHansManager : stateRToFFreeze--imporant case: pkgName: moe.shizuku.privileged.api, reason: lastResumeProtect
+06-21 16:22:35.873   768  1093 E HWComposer: getDisplayedContentSample: getDisplayedContentSample failed for display 0: Unsupported (8)
+06-21 16:22:35.966   506   506 E lowmemorykiller: ignore it, cause of file_cache:324164 over watermark

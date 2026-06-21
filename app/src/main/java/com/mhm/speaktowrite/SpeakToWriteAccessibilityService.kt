@@ -106,6 +106,9 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private var sliderState = SliderState.COLLAPSED
     private var lastAddedState: SliderState? = null
     private var isTransitioning = false
+    private var isDraggingToOpen = false
+    private var currentDragDx = 0f
+    private var activeTempHandle: View? = null
 
     // ── Views ───────────────────────────────────────────────────────────
     private var rootWrapper: FrameLayout? = null
@@ -213,7 +216,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         val totalW = if (hasValidApiKey) micSize + arrowSize * 2 else micSize + arrowSize
 
         val handleWidth = (6 * dp).toInt()
-        val handleHeight = (72 * dp).toInt()
+        val handleHeight = micSize
 
         // Create the temporary handle to animate sliding in
         val tempHandle = View(this).apply {
@@ -222,15 +225,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 alpha = (alphaPercent * 255).toInt()
             }
         }
-
-        val savedY = settings.sliderY.let {
-            if (it == -1) screenH / 4 else it
-        }
+        activeTempHandle = tempHandle
 
         val tempHandleParams = FrameLayout.LayoutParams(handleWidth, handleHeight).apply {
-            val margin = (MARGIN_DP * dp).toInt()
             gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.TOP
-            topMargin = savedY.coerceIn(margin, screenH - handleHeight - margin)
         }
 
         rootWrapper?.addView(tempHandle, tempHandleParams)
@@ -257,6 +255,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             ?.withEndAction {
                 sliderState = SliderState.COLLAPSED
                 isTransitioning = false
+                activeTempHandle = null
                 updateOverlayLayout()
             }
             ?.start()
@@ -281,36 +280,32 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         lastAddedState = sliderState
 
-        val width = if (sliderState == SliderState.COLLAPSED) {
+        val targetWidth = if (sliderState == SliderState.COLLAPSED) {
             (24 * dp).toInt()
         } else {
-            screenW
+            totalW
         }
-        val height = if (sliderState == SliderState.COLLAPSED) {
-            (72 * dp).toInt()
-        } else {
-            screenH
-        }
+        val targetHeight = micSize
 
         val savedY = settings.sliderY.let {
             if (it == -1) screenH / 4 else it
         }
 
+        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        if (sliderState == SliderState.EXPANDED) {
+            flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        }
+
         val params = WindowManager.LayoutParams(
-            width, height,
+            targetWidth, targetHeight,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            flags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            windowAnimations = 0
-            if (sliderState == SliderState.COLLAPSED) {
-                x = if (isLeftEdge) 0 else screenW - width
-                y = savedY.coerceIn(margin, screenH - height - margin)
-            } else {
-                x = 0
-                y = 0
-            }
+            gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.TOP
+            windowAnimations = R.style.WindowNoAnimation
+            x = 0
+            y = savedY.coerceIn(margin, screenH - targetHeight - margin)
         }
         layoutParams = params
 
@@ -318,7 +313,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         if (sliderState == SliderState.COLLAPSED) {
             val handleWidth = (6 * dp).toInt()
-            val handleHeight = (72 * dp).toInt()
+            val handleHeight = micSize
 
             val handle = View(this).apply {
                 background = pillBg(getStateColor(state))
@@ -335,7 +330,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 root.post {
                     try {
                         root.systemGestureExclusionRects = listOf(
-                            Rect(0, 0, width, height)
+                            Rect(0, 0, targetWidth, targetHeight)
                         )
                     } catch (_: Exception) {}
                 }
@@ -367,6 +362,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                         touchY = ev.rawY
                         isDragging = false
                         isLongPressed = false
+                        isDraggingToOpen = false
                         currentIsLeftEdge = settings.sliderIsLeftEdge
                         longPressHandler.postDelayed(longPressRunnable, 500)
                         true
@@ -375,12 +371,48 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                         val dx = ev.rawX - touchX
                         val dy = ev.rawY - touchY
                         
-                        if (!isLongPressed && (abs(dx) > TAP_THRESHOLD_DP * dp || abs(dy) > TAP_THRESHOLD_DP * dp)) {
+                        if (!isLongPressed && !isDraggingToOpen && (abs(dx) > TAP_THRESHOLD_DP * dp || abs(dy) > TAP_THRESHOLD_DP * dp)) {
                             longPressHandler.removeCallbacks(longPressRunnable)
-                            isDragging = true
+                            
+                            // Check if the drag is primarily horizontal to open the drawer
+                            if (abs(dx) > abs(dy)) {
+                                val canOpen = if (isLeftEdge) dx > 0 else dx < 0
+                                if (canOpen) {
+                                    isDraggingToOpen = true
+                                    currentDragDx = dx
+                                    expandSlider()
+                                } else {
+                                    isDragging = true
+                                }
+                            } else {
+                                isDragging = true
+                            }
                         }
                         
-                        if (isLongPressed) {
+                        if (isDraggingToOpen) {
+                            currentDragDx = dx
+                            val progress = if (isLeftEdge) {
+                                (dx / totalW).coerceIn(0f, 1f)
+                            } else {
+                                (-dx / totalW).coerceIn(0f, 1f)
+                            }
+                            
+                            val containerTargetX = if (isLeftEdge) {
+                                -totalW + dx
+                            } else {
+                                totalW + dx
+                            }
+                            val clampedContainerX = if (isLeftEdge) {
+                                containerTargetX.coerceAtMost(0f)
+                            } else {
+                                containerTargetX.coerceAtLeast(0f)
+                            }
+                            
+                            controlPanelContainer?.translationX = clampedContainerX
+                            
+                            val handleTargetX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+                            activeTempHandle?.translationX = handleTargetX * progress
+                        } else if (isLongPressed) {
                             params.y = (startY + dy.toInt()).coerceIn(margin, screenH - handleHeight - margin)
                             
                             val rawX = ev.rawX
@@ -389,13 +421,15 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                             if (currentIsLeftEdge && rawX > screenW / 2) {
                                 currentIsLeftEdge = false
                                 settings.sliderIsLeftEdge = false
-                                params.x = screenW - width
+                                params.gravity = Gravity.END or Gravity.TOP
+                                params.x = 0
                                 
                                 handleView?.background = pillBg(getStateColor(state))
                                 handleView?.translationX = -jumpAmount.toFloat()
                             } else if (!currentIsLeftEdge && rawX < screenW / 2) {
                                 currentIsLeftEdge = true
                                 settings.sliderIsLeftEdge = true
+                                params.gravity = Gravity.START or Gravity.TOP
                                 params.x = 0
                                 
                                 handleView?.background = pillBg(getStateColor(state))
@@ -417,10 +451,71 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                                 removeOverlay()
                                 showOverlay()
                             }?.start()
+                        } else if (isDraggingToOpen) {
+                            val dx = ev.rawX - touchX
+                            val progress = if (isLeftEdge) {
+                                dx / totalW
+                            } else {
+                                -dx / totalW
+                            }
+                            
+                            val shouldOpen = progress > 0.4f && ev.action == MotionEvent.ACTION_UP
+                            
+                            if (shouldOpen) {
+                                // Complete open animation
+                                controlPanelContainer?.animate()
+                                    ?.translationX(0f)
+                                    ?.setDuration(150)
+                                    ?.setInterpolator(DecelerateInterpolator())
+                                    ?.start()
+                                
+                                val handleTargetX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+                                activeTempHandle?.animate()
+                                    ?.translationX(handleTargetX)
+                                    ?.setDuration(150)
+                                    ?.setInterpolator(DecelerateInterpolator())
+                                    ?.withEndAction {
+                                        root.removeView(activeTempHandle)
+                                        activeTempHandle = null
+                                        isTransitioning = false
+                                        isDraggingToOpen = false
+                                        root.setOnTouchListener { _, outEv ->
+                                            if (outEv.action == MotionEvent.ACTION_OUTSIDE) {
+                                                collapseSlider()
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                    }
+                                    ?.start()
+                            } else {
+                                // Revert to collapsed
+                                val containerTargetX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
+                                controlPanelContainer?.animate()
+                                    ?.translationX(containerTargetX)
+                                    ?.setDuration(150)
+                                    ?.setInterpolator(DecelerateInterpolator())
+                                    ?.start()
+                                
+                                activeTempHandle?.animate()
+                                    ?.translationX(0f)
+                                    ?.setDuration(150)
+                                    ?.setInterpolator(DecelerateInterpolator())
+                                    ?.withEndAction {
+                                        sliderState = SliderState.COLLAPSED
+                                        isTransitioning = false
+                                        isDraggingToOpen = false
+                                        updateOverlayLayout()
+                                    }
+                                    ?.start()
+                            }
                         } else if (ev.action == MotionEvent.ACTION_UP) {
                             val dx = ev.rawX - touchX
+                            val dy = ev.rawY - touchY
+                            val isTap = abs(dx) < TAP_THRESHOLD_DP * dp && abs(dy) < TAP_THRESHOLD_DP * dp
                             val swipeThreshold = 30 * dp
-                            val expand = if (currentIsLeftEdge) {
+                            val expand = isTap || if (isLeftEdge) {
                                 dx > swipeThreshold
                             } else {
                                 dx < -swipeThreshold
@@ -441,14 +536,16 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             }
 
         } else {
-            val backdrop = View(this).apply {
-                setBackgroundColor(0x00000000)
-                setOnClickListener {
-                    collapseSlider()
+            if (!isDraggingToOpen) {
+                root.setOnTouchListener { _, ev ->
+                    if (ev.action == MotionEvent.ACTION_OUTSIDE) {
+                        collapseSlider()
+                        true
+                    } else {
+                        false
+                    }
                 }
             }
-            backdropView = backdrop
-            root.addView(backdrop, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
 
             val micImg = ImageView(this).apply {
                 setImageResource(R.drawable.ic_mic)
@@ -505,15 +602,13 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             }
 
             val containerParams = FrameLayout.LayoutParams(totalW, micSize).apply {
-                gravity = Gravity.TOP or Gravity.START
-                leftMargin = if (isLeftEdge) 0 else screenW - totalW
-                topMargin = savedY.coerceIn(margin, screenH - micSize - margin)
+                gravity = Gravity.TOP or (if (isLeftEdge) Gravity.START else Gravity.END)
             }
             root.addView(container, containerParams)
 
             // Create temporary handle to slide offscreen while container slides onscreen
             val handleWidth = (6 * dp).toInt()
-            val handleHeight = (72 * dp).toInt()
+            val handleHeight = micSize
             val tempHandle = View(this).apply {
                 background = pillBg(getStateColor(state)).mutate().apply {
                     val alphaPercent = (1.0f - settings.sliderOpacity).coerceIn(0.0f, 1.0f)
@@ -522,7 +617,6 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             }
             val tempHandleParams = FrameLayout.LayoutParams(handleWidth, handleHeight).apply {
                 gravity = (if (isLeftEdge) Gravity.START else Gravity.END) or Gravity.TOP
-                topMargin = savedY.coerceIn(margin, screenH - handleHeight - margin)
             }
             root.addView(tempHandle, tempHandleParams)
 
@@ -533,8 +627,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             container.setOnTouchListener { v, ev ->
                 when (ev.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        val lp = v.layoutParams as FrameLayout.LayoutParams
-                        startY = lp.topMargin
+                        startY = params.y
                         touchX = ev.rawX
                         touchY = ev.rawY
                         isDragging = false
@@ -547,9 +640,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                             isDragging = true
                         }
                         if (isDragging) {
-                            val lp = v.layoutParams as FrameLayout.LayoutParams
-                            lp.topMargin = (startY + dy.toInt()).coerceIn(margin, screenH - micSize - margin)
-                            v.layoutParams = lp
+                            params.y = (startY + dy.toInt()).coerceIn(margin, screenH - micSize - margin)
+                            try { wm.updateViewLayout(root, params) } catch (_: Exception) {}
                         }
                         true
                     }
@@ -569,8 +661,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                                 onZoneTapModel()
                             }
                         } else {
-                            val lp = v.layoutParams as FrameLayout.LayoutParams
-                            settings.sliderY = lp.topMargin
+                            settings.sliderY = params.y
 
                             val swipeThreshold = 30 * dp
                             val collapsed = if (isLeftEdge) {
@@ -589,25 +680,40 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 }
             }
 
-            container.translationX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
-            tempHandle.translationX = 0f
+            activeTempHandle = tempHandle
 
-            container.animate()
-                .translationX(0f)
-                .setDuration(220)
-                .setInterpolator(DecelerateInterpolator())
-                .start()
+            if (isDraggingToOpen) {
+                val dx = currentDragDx
+                val progress = (if (isLeftEdge) dx / totalW else -dx / totalW).coerceIn(0f, 1f)
+                
+                val containerTargetX = if (isLeftEdge) -totalW + dx else totalW + dx
+                val clampedContainerTargetX = if (isLeftEdge) containerTargetX.coerceAtMost(0f) else containerTargetX.coerceAtLeast(0f)
+                container.translationX = clampedContainerTargetX
+                
+                val handleTargetX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+                tempHandle.translationX = handleTargetX * progress
+            } else {
+                container.translationX = if (isLeftEdge) -totalW.toFloat() else totalW.toFloat()
+                tempHandle.translationX = 0f
 
-            val handleTargetTranslationX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
-            tempHandle.animate()
-                .translationX(handleTargetTranslationX)
-                .setDuration(220)
-                .setInterpolator(DecelerateInterpolator())
-                .withEndAction {
-                    root.removeView(tempHandle)
-                    isTransitioning = false
-                }
-                .start()
+                container.animate()
+                    .translationX(0f)
+                    .setDuration(220)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+
+                val handleTargetTranslationX = if (isLeftEdge) -handleWidth.toFloat() else handleWidth.toFloat()
+                tempHandle.animate()
+                    .translationX(handleTargetTranslationX)
+                    .setDuration(220)
+                    .setInterpolator(DecelerateInterpolator())
+                    .withEndAction {
+                        root.removeView(tempHandle)
+                        activeTempHandle = null
+                        isTransitioning = false
+                    }
+                    .start()
+            }
         }
 
         val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
@@ -640,6 +746,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         dividerView = null
         layoutParams = null
         isTransitioning = false
+        activeTempHandle = null
     }
 
     // ====================================================================
