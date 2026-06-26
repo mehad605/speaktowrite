@@ -69,6 +69,7 @@ import com.mhm.speaktowrite.ui.dialogs.HelpDialog
 import com.mhm.speaktowrite.ui.dialogs.LoadingModelDialog
 import com.mhm.speaktowrite.ui.dialogs.PromptEditorDialog
 import com.mhm.speaktowrite.ui.dialogs.DeletePromptConfirmDialog
+import com.mhm.speaktowrite.ui.dialogs.DiagnosticsDialog
 import com.mhm.speaktowrite.ui.dialogs.ExportConfigDialog
 import com.mhm.speaktowrite.ui.sections.AiPolishSection
 import com.mhm.speaktowrite.ui.sections.ModelSection
@@ -197,6 +198,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var shouldExportWithApiKey by remember { mutableStateOf(true) }
     var showDeletePromptDialog by remember { mutableStateOf(false) }
     var promptToDelete by remember { mutableStateOf<PromptPreset?>(null) }
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
 
     val exportConfigLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -479,6 +481,25 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
                 )
+
+                // ── Diagnostics footer button ─────────────────────────────
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    androidx.compose.material3.TextButton(
+                        onClick = { showDiagnosticsDialog = true },
+                    ) {
+                        Text(
+                            text = "⚙ View Diagnostics",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(64.dp))
             }
         }
@@ -545,6 +566,10 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 exportConfigLauncher.launch("speak_to_write_config.json")
             }
         )
+    }
+
+    if (showDiagnosticsDialog) {
+        DiagnosticsDialog(onDismiss = { showDiagnosticsDialog = false })
     }
 }
 

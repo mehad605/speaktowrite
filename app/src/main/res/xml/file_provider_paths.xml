@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Declares which internal directories can be shared via FileProvider.
+  The "files" path maps to Context.getFilesDir() — where service_log.txt lives.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path
+        name="internal_files"
+        path="." />
+</paths>

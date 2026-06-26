@@ -42,6 +42,8 @@ import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class SpeakToWriteAccessibilityService : AccessibilityService() {
@@ -136,6 +138,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private var lockScreenReceiver: android.content.BroadcastReceiver? = null
     private var prefListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
+    // ── Lifecycle-bound coroutine scope ────────────────────────────────
+    // Using SupervisorJob so one child failure doesn't cancel the whole scope.
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+
+    // Token used to debounce rapid overlay-rebuild requests from the pref listener
+    private val overlayRebuildToken = Any()
+
     // ── Helpers ──────────────────────────────────────────────────────────
     private val dp get() = resources.displayMetrics.density
     private val screenW get() = resources.displayMetrics.widthPixels
@@ -148,6 +158,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        ServiceLogger.init(this)
+        ServiceLogger.i(TAG, "onServiceConnected() PID=${android.os.Process.myPid()}")
         TranscriberManager.init(this)
         showOverlay()
         observeModelLoading()
@@ -156,29 +168,52 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        ServiceLogger.w(TAG, "onDestroy() — service is being torn down")
         instance = null
+        // Cancel ALL coroutines tied to this service instance
+        serviceJob.cancel()
         observeJob?.cancel()
         unregisterLockScreenReceiver()
         unregisterPrefListener()
+        // Remove any pending debounced overlay rebuilds
+        handler.removeCallbacksAndMessages(overlayRebuildToken)
         removeOverlay()
         removeDropdown()
         super.onDestroy()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
-    override fun onInterrupt() {}
+
+    override fun onInterrupt() {
+        // Called by Android when the accessibility service is about to be force-disconnected.
+        ServiceLogger.w(TAG, "onInterrupt() — Android is interrupting/restarting the service")
+    }
+
+    override fun onUnbind(intent: android.content.Intent?): Boolean {
+        ServiceLogger.w(TAG, "onUnbind() — system unbound the accessibility service")
+        return super.onUnbind(intent)
+    }
 
     // ====================================================================
     // Model-loading state observer
     // ====================================================================
 
     private fun observeModelLoading() {
-        observeJob = CoroutineScope(Dispatchers.Main).launch {
+        // Use serviceScope so this coroutine is cancelled when the service is destroyed.
+        observeJob = serviceScope.launch {
             TranscriberManager.isLoading
                 .collect { loading ->
                     if (loading && state == State.IDLE) {
+                        ServiceLogger.d(TAG, "Model loading started — entering LOADING_MODEL state")
                         enterState(State.LOADING_MODEL)
                     } else if (!loading && state == State.LOADING_MODEL) {
+                        val err = TranscriberManager.loadError.value
+                        if (err != null) {
+                            ServiceLogger.w(TAG, "Model load finished with error: $err")
+                            toast("Model failed to load — $err")
+                        } else {
+                            ServiceLogger.d(TAG, "Model loading finished — returning to IDLE")
+                        }
                         enterState(State.IDLE)
                     }
                 }
@@ -253,6 +288,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
             ?.setDuration(220)
             ?.setInterpolator(DecelerateInterpolator())
             ?.withEndAction {
+                // Guard: if service was destroyed mid-animation, skip the rebuild
+                if (instance == null) {
+                    ServiceLogger.w(TAG, "collapseSlider withEndAction: service gone, skipping overlay rebuild")
+                    return@withEndAction
+                }
                 sliderState = SliderState.COLLAPSED
                 isTransitioning = false
                 activeTempHandle = null
@@ -448,6 +488,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                             settings.sliderIsLeftEdge = currentIsLeftEdge
                             
                             handleView?.animate()?.translationX(0f)?.setDuration(150)?.withEndAction {
+                                // Guard: service may have been destroyed mid-drag
+                                if (instance == null) {
+                                    ServiceLogger.w(TAG, "Long-press withEndAction: service gone, skipping overlay rebuild")
+                                    return@withEndAction
+                                }
                                 removeOverlay()
                                 showOverlay()
                             }?.start()
@@ -725,16 +770,30 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
         val isNowAdded = root.parent != null
         if (!isNowAdded) {
-            try { wm.addView(root, params) } catch (_: Exception) {}
+            try {
+                wm.addView(root, params)
+                ServiceLogger.d(TAG, "Overlay added to WindowManager (state=$state, slider=$sliderState)")
+            } catch (e: Exception) {
+                ServiceLogger.e(TAG, "wm.addView failed: ${e.javaClass.simpleName} — ${e.message}", e)
+            }
         } else {
-            try { wm.updateViewLayout(root, params) } catch (_: Exception) {}
+            try {
+                wm.updateViewLayout(root, params)
+            } catch (e: Exception) {
+                ServiceLogger.e(TAG, "wm.updateViewLayout failed: ${e.javaClass.simpleName} — ${e.message}", e)
+            }
         }
     }
 
     private fun removeOverlay() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
         rootWrapper?.let {
-            try { wm.removeView(it) } catch (_: Exception) {}
+            try {
+                wm.removeView(it)
+                ServiceLogger.d(TAG, "Overlay removed from WindowManager")
+            } catch (e: Exception) {
+                ServiceLogger.e(TAG, "wm.removeView failed: ${e.javaClass.simpleName} — ${e.message}", e)
+            }
         }
         rootWrapper = null
         handleView = null
@@ -1236,44 +1295,64 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         pcmStream = null
 
         if (pcm.isEmpty()) {
+            ServiceLogger.w(TAG, "stopAndTranscribe: no audio captured")
             toast("No audio captured")
             resetState()
             return
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val floatArray = FloatArray(pcm.size / 2)
-            var i = 0
-            while (i < pcm.size - 1) {
-                val sample = (pcm[i].toInt() and 0xFF) or (pcm[i + 1].toInt() shl 8)
-                floatArray[i / 2] = sample.toShort().toFloat() / 32768f
-                i += 2
-            }
+        ServiceLogger.d(TAG, "stopAndTranscribe: ${pcm.size} bytes captured, starting transcription")
 
-            val rawText = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
-
-            var finalText = rawText
-            if (finalText.isNotBlank()) {
-                val settings = com.mhm.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
-                if (settings.cleanupEnabled && settings.apiKey.isNotBlank()) {
-                    val promptText = settings.prompts.find { it.id == settings.selectedPromptId }?.content ?: ""
-                    val cleaned = com.mhm.speaktowrite.models.PostProcessor.process(
-                        text = rawText,
-                        prompt = promptText,
-                        apiKey = settings.apiKey,
-                        model = settings.selectedAiModel
-                    )
-                    if (cleaned != null) finalText = cleaned
+        // Use serviceScope so this is cancelled if the service is destroyed mid-transcription.
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                val floatArray = FloatArray(pcm.size / 2)
+                var i = 0
+                while (i < pcm.size - 1) {
+                    val sample = (pcm[i].toInt() and 0xFF) or (pcm[i + 1].toInt() shl 8)
+                    floatArray[i / 2] = sample.toShort().toFloat() / 32768f
+                    i += 2
                 }
-            }
 
-            handler.post {
-                if (finalText.isBlank()) {
-                    toast("No speech detected")
-                } else {
-                    injectText(finalText)
+                val rawText = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
+                ServiceLogger.d(TAG, "Transcription result: ${rawText.take(120)}")
+
+                var finalText = rawText
+                if (finalText.isNotBlank()) {
+                    val settings = com.mhm.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
+                    if (settings.cleanupEnabled && settings.apiKey.isNotBlank()) {
+                        val promptText = settings.prompts.find { it.id == settings.selectedPromptId }?.content ?: ""
+                        val cleaned = com.mhm.speaktowrite.models.PostProcessor.process(
+                            text = rawText,
+                            prompt = promptText,
+                            apiKey = settings.apiKey,
+                            model = settings.selectedAiModel
+                        )
+                        if (cleaned != null) finalText = cleaned
+                    }
                 }
-                resetState()
+
+                handler.post {
+                    // Guard: service may have been destroyed while transcription was in flight
+                    if (instance == null) {
+                        ServiceLogger.w(TAG, "Transcription complete but service was destroyed; discarding result")
+                        return@post
+                    }
+                    if (finalText.isBlank()) {
+                        toast("No speech detected")
+                    } else {
+                        injectText(finalText)
+                    }
+                    resetState()
+                }
+            } catch (e: Exception) {
+                ServiceLogger.e(TAG, "Transcription failed: ${e.javaClass.simpleName} — ${e.message}", e)
+                handler.post {
+                    if (instance != null) {
+                        toast("Transcription error: ${e.message}")
+                        resetState()
+                    }
+                }
             }
         }
     }
@@ -1444,6 +1523,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
 
     private fun registerPrefListener() {
         prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            ServiceLogger.d(TAG, "Pref changed: $key")
             if (key == "show_on_lock_screen") {
                 val settings = com.mhm.speaktowrite.models.SettingsManager(this)
                 val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
@@ -1455,10 +1535,22 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                     rootWrapper?.visibility = View.VISIBLE
                 }
             } else if (key == "api_key" || key == "is_api_key_valid" || key == "slider_opacity" || key == "slider_is_left_edge") {
-                handler.post {
-                    removeOverlay()
-                    showOverlay()
-                }
+                // Debounce: cancel any pending rebuild and schedule a fresh one.
+                // This prevents a rapid burst of pref changes (e.g. dragging the
+                // opacity slider) from flooding the WindowManager with rebuild calls.
+                handler.removeCallbacksAndMessages(overlayRebuildToken)
+                handler.postDelayed(
+                    /* r= */ {
+                        // Guard: ensure service is still alive before rebuilding
+                        if (instance != null) {
+                            ServiceLogger.d(TAG, "Rebuilding overlay after pref change: $key")
+                            removeOverlay()
+                            showOverlay()
+                        }
+                    },
+                    /* token= */ overlayRebuildToken,
+                    /* delayMillis= */ 120L   // 120 ms debounce
+                )
             }
         }
         val prefs = getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)

@@ -1,7 +1,11 @@
 package com.mhm.speaktowrite.ui.dialogs
 
+import android.content.Intent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,21 +30,29 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
+import com.mhm.speaktowrite.theme.AuroraError
 import com.mhm.speaktowrite.theme.AuroraSurface
 import com.mhm.speaktowrite.theme.Emerald
 import com.mhm.speaktowrite.ui.components.AuroraDivider
 import com.mhm.speaktowrite.ui.components.BrandButton
 import com.mhm.speaktowrite.ui.main.PromptPreset
+import java.io.File
 
 /** Indeterminate "loading model into memory" dialog. */
 @Composable
@@ -308,3 +320,151 @@ private fun fieldColors() = androidx.compose.material3.OutlinedTextFieldDefaults
     focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
     unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
 )
+
+// ── Diagnostics ───────────────────────────────────────────────────────────────
+
+/**
+ * Shows the last N lines of the service log and offers a "Share" button so
+ * any user — even a non-technical one who installed the APK from GitHub — can
+ * send the log to the developer with one tap.
+ */
+@Composable
+fun DiagnosticsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val logFile = remember { File(context.filesDir, "service_log.txt") }
+    var logLines by remember { mutableStateOf("Loading…") }
+    val previewLines = 80
+
+    // Read last N lines off the main thread
+    LaunchedEffect(Unit) {
+        logLines = if (!logFile.exists()) {
+            "No log file yet.\n\nThe service hasn't run since the logger was added, " +
+                "or the accessibility service hasn't been enabled yet."
+        } else {
+            val all = logFile.readLines()
+            if (all.isEmpty()) "Log file exists but is empty."
+            else all.takeLast(previewLines).joinToString("\n")
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+            border = BorderStroke(1.dp, AuroraError),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // ── Header
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Diagnostics",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = AuroraError,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Last $previewLines log lines",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // ── Log content (scrollable, monospace)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp, max = 340.dp)
+                        .background(
+                            Color(0xFF0D0D0F),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(10.dp)
+                ) {
+                    val vScroll = rememberScrollState(Int.MAX_VALUE)
+                    Text(
+                        text = logLines,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        color = Color(0xFFB0C8B0),  // soft green terminal colour
+                        modifier = Modifier
+                            .verticalScroll(vScroll)
+                            .horizontalScroll(rememberScrollState()),
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Scroll up for older entries",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                )
+
+                Spacer(Modifier.height(16.dp))
+                AuroraDivider()
+                Spacer(Modifier.height(12.dp))
+
+                // ── Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Close", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    BrandButton(
+                        text = "Share Log",
+                        onClick = {
+                            shareLogFile(context, logFile)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun shareLogFile(context: android.content.Context, logFile: File) {
+    if (!logFile.exists()) {
+        android.widget.Toast.makeText(
+            context,
+            "No log file found — enable the accessibility service first",
+            android.widget.Toast.LENGTH_LONG,
+        ).show()
+        return
+    }
+
+    // FileProvider URI — safe to share across apps
+    val uri = try {
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            logFile,
+        )
+    } catch (e: Exception) {
+        // Fallback: share raw text if FileProvider isn't configured
+        val text = try { logFile.readText() } catch (_: Exception) { "Could not read log." }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "SpeakToWrite diagnostic log")
+            putExtra(Intent.EXTRA_TEXT, text.takeLast(8000)) // system clipboard limit
+        }
+        context.startActivity(Intent.createChooser(intent, "Share log via…"))
+        return
+    }
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "SpeakToWrite diagnostic log")
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share log via…"))
+}

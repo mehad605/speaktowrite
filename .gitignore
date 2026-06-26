@@ -52,12 +52,15 @@ captures/
 log.txt
 crash.txt
 
-# Generated JAR / compiled bytecode
+# Generated JAR / compiled bytecode (root-level only — the /com prefix keeps
+# this from matching app/src/main/java/com which is real source code)
 classes.jar
-com/
+/com/
 
-# Scratch / inspection scripts
+# Scratch / inspection scripts (never production code — excluded from tracking)
 Inspect.kt
+ReplaceScript.kt
+TestOutsideTouch.kt
 
 # Native build folders
 .externalNativeBuild/
