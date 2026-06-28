@@ -3,6 +3,8 @@ package com.mhm.speaktowrite.ui.main
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -100,6 +102,14 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var hasAccessibilityPermission by remember {
         mutableStateOf(SpeakToWriteAccessibilityService.isEnabled(context))
     }
+    // isBatteryOptimized = true means the OS can still kill us (bad).
+    // isBatteryOptimized = false means we are exempt from battery optimisation (good).
+    var isBatteryOptimized by remember {
+        mutableStateOf(
+            (context.getSystemService(PowerManager::class.java))
+                ?.isIgnoringBatteryOptimizations(context.packageName) == false
+        )
+    }
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -110,6 +120,8 @@ fun MainScreen(modifier: Modifier = Modifier) {
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasAudioPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                 hasAccessibilityPermission = SpeakToWriteAccessibilityService.isEnabled(context)
+                isBatteryOptimized = (context.getSystemService(PowerManager::class.java))
+                    ?.isIgnoringBatteryOptimizations(context.packageName) == false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -371,6 +383,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 SetupSection(
                     hasAudio = hasAudioPermission,
                     hasAccessibility = hasAccessibilityPermission,
+                    isBatteryOptimized = isBatteryOptimized,
                     showOnLockScreen = showOnLockScreen,
                     onShowOnLockScreenToggle = {
                         showOnLockScreen = it
@@ -391,6 +404,22 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     },
                     onAccessibilityClick = {
                         if (!hasAccessibilityPermission) context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    },
+                    onBatteryClick = {
+                        // Direct deep-link to the battery-optimisation exemption dialog.
+                        // On stock Android this shows a system dialog; on OEM ROMs it
+                        // opens the "Battery" settings page where the user can set
+                        // "Unrestricted" / "Don't optimise".
+                        val intent = Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            // Fallback: some OEMs block the direct intent; open battery settings.
+                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        }
                     },
                 )
 

@@ -98,7 +98,7 @@ class LocalTranscriber private constructor(
                         ),
                         tokens = tokens,
                         bpeVocab = if (bpe.exists()) bpe.absolutePath else "",
-                        numThreads = 2,
+                        numThreads = 4,
                         modelType = "",
                     )
                 )
@@ -121,7 +121,7 @@ class LocalTranscriber private constructor(
                             cachedDecoder = findFile(p, "cached_decode") ?: return null,
                         ),
                         tokens = tokens,
-                        numThreads = 2,
+                        numThreads = 4,
                     )
                 )
             }
@@ -136,7 +136,7 @@ class LocalTranscriber private constructor(
                             decoder = whisperDecoder,
                         ),
                         tokens = tokens,
-                        numThreads = 2,
+                        numThreads = 4,
                         modelType = "whisper",
                     )
                 )
@@ -154,7 +154,7 @@ class LocalTranscriber private constructor(
                             joiner = joiner,
                         ),
                         tokens = tokens,
-                        numThreads = 2,
+                        numThreads = 4,
                         modelType = "nemo_transducer",
                     )
                 )
@@ -166,7 +166,7 @@ class LocalTranscriber private constructor(
                     modelConfig = OfflineModelConfig(
                         nemo = OfflineNemoEncDecCtcModelConfig(model = ctcModel),
                         tokens = tokens,
-                        numThreads = 2,
+                        numThreads = 4,
                     )
                 )
             }

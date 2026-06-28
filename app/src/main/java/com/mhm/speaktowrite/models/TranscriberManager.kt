@@ -12,7 +12,20 @@ import java.io.File
 object TranscriberManager {
     private const val TAG = "TranscriberManager"
 
-    var transcriber: LocalTranscriber? = null
+    private const val MAX_CACHED_MODELS = 2
+    private val transcriberCache = object : java.util.LinkedHashMap<String, LocalTranscriber>(MAX_CACHED_MODELS, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, LocalTranscriber>): Boolean {
+            if (size > MAX_CACHED_MODELS) {
+                ServiceLogger.i(TAG, "Evicting model from cache to save RAM: ${eldest.key}")
+                eldest.value.release()
+                return true
+            }
+            return false
+        }
+    }
+
+    val transcriber: LocalTranscriber?
+        get() = synchronized(transcriberCache) { currentModel.value?.let { transcriberCache[it] } }
     val isLoading = MutableStateFlow(false)
     val currentModel = MutableStateFlow<String?>(null)
 
@@ -30,17 +43,28 @@ object TranscriberManager {
     }
 
     fun loadModel(context: Context, modelName: String) {
-        if (currentModel.value == modelName && transcriber != null) {
-            ServiceLogger.d(TAG, "loadModel($modelName) skipped — already loaded")
+        val alreadyLoaded = synchronized(transcriberCache) { transcriberCache.containsKey(modelName) }
+        
+        if (currentModel.value == modelName && alreadyLoaded) {
+            ServiceLogger.d(TAG, "loadModel($modelName) skipped — already active")
+            return
+        }
+
+        // Save to prefs immediately so UI knows what's selected
+        context.getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
+            .edit().putString("selected_model", modelName).apply()
+        currentModel.value = modelName
+
+        if (alreadyLoaded) {
+            // Model is already in RAM (LRU cache hit). Instant switch.
+            ServiceLogger.i(TAG, "loadModel($modelName) — INSTANT SWITCH from cache")
+            // A quick read to update LRU access order
+            synchronized(transcriberCache) { transcriberCache[modelName] }
             return
         }
 
         ServiceLogger.i(TAG, "loadModel($modelName) starting")
 
-        // Save to prefs
-        context.getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
-            .edit().putString("selected_model", modelName).apply()
-        currentModel.value = modelName
         isLoading.value = true
         _loadError.value = null
 
@@ -48,15 +72,19 @@ object TranscriberManager {
         // continue even if the AccessibilityService restarts mid-load.
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val old = transcriber
-                transcriber = LocalTranscriber.create(context, modelName)
-                old?.release() // Ensure old model is freed
-                ServiceLogger.i(TAG, "loadModel($modelName) SUCCESS")
+                val newTranscriber = LocalTranscriber.create(context, modelName)
+                if (newTranscriber != null) {
+                    synchronized(transcriberCache) {
+                        transcriberCache.put(modelName, newTranscriber)
+                    }
+                    ServiceLogger.i(TAG, "loadModel($modelName) SUCCESS")
+                } else {
+                    throw Exception("Failed to instantiate model")
+                }
             } catch (e: Exception) {
                 val reason = "${e.javaClass.simpleName}: ${e.message}"
                 ServiceLogger.e(TAG, "loadModel($modelName) FAILED — $reason", e)
                 _loadError.value = reason
-                transcriber = null
             } finally {
                 isLoading.value = false
             }

@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Keep the process alive in the OEM foreground-service tier (much harder
+         to kill than a plain background service or accessibility service alone). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Lets the app deep-link the user to the "Unrestricted battery" setting. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -21,9 +29,13 @@
             </intent-filter>
         </activity>
 
+        <!-- foregroundServiceType="specialUse" is required on Android 14+
+             (targetSdk ≥ 34) for services that don't fit a predefined category.
+             The <property> block documents the justification to the platform. -->
         <service
             android:name=".SpeakToWriteAccessibilityService"
             android:exported="false"
+            android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -31,6 +43,10 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+            <!-- Required companion to foregroundServiceType="specialUse". -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent overlay mic button for voice dictation into any text field" />
         </service>
 
         <!-- FileProvider lets the app share internal files (e.g. service_log.txt)

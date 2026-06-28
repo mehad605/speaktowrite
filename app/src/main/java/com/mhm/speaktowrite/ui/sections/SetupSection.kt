@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.AccessibilityNew
@@ -33,6 +35,9 @@ import com.mhm.speaktowrite.ui.components.GlassCard
 import com.mhm.speaktowrite.ui.components.IconBadge
 import com.mhm.speaktowrite.ui.components.SectionEyebrow
 
+// Amber — used for the "recommended but optional" battery warning state.
+private val AuroraAmber = Color(0xFFF59E0B)
+
 /**
  * Step 1 — grant the two permissions the floating mic needs.
  * Each row is actionable: tap to fix what's missing.
@@ -41,6 +46,7 @@ import com.mhm.speaktowrite.ui.components.SectionEyebrow
 fun SetupSection(
     hasAudio: Boolean,
     hasAccessibility: Boolean,
+    isBatteryOptimized: Boolean,      // true = OS can still kill us; false = exempted (good)
     showOnLockScreen: Boolean,
     onShowOnLockScreenToggle: (Boolean) -> Unit,
     sliderIsLeftEdge: Boolean,
@@ -49,6 +55,7 @@ fun SetupSection(
     onSliderOpacityChange: (Float) -> Unit,
     onAudioClick: () -> Unit,
     onAccessibilityClick: () -> Unit,
+    onBatteryClick: () -> Unit,
 ) {
     SectionEyebrow("Setup", step = 1, modifier = Modifier.padding(start = 24.dp, top = 8.dp))
     GlassCard(
@@ -75,6 +82,22 @@ fun SetupSection(
             trailing = { if (hasAccessibility) DoneBadge() },
             onClick = onAccessibilityClick,
             modifier = Modifier.clickable { onAccessibilityClick() },
+        )
+        AuroraDivider()
+        // Battery optimisation row — shown as a soft warning (amber) when the OS
+        // still has the app in its kill list, and green once exempted.
+        AuroraRow(
+            icon = if (isBatteryOptimized) Icons.Default.BatteryAlert
+                   else Icons.Default.BatteryChargingFull,
+            iconTint = if (isBatteryOptimized) AuroraAmber else AuroraSuccess,
+            title = "Battery Optimisation",
+            subtitle = if (isBatteryOptimized)
+                "Tap to exempt — prevents OS from killing the overlay"
+            else
+                "Exempted — overlay will stay running",
+            trailing = { if (!isBatteryOptimized) DoneBadge() },
+            onClick = onBatteryClick,
+            modifier = Modifier.clickable { onBatteryClick() },
         )
         AuroraDivider()
         AuroraRow(

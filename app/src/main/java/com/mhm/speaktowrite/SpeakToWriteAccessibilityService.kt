@@ -4,8 +4,13 @@ import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.graphics.Rect
@@ -32,6 +37,7 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.ScrollView
 import android.widget.FrameLayout
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -51,6 +57,11 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "SpeakToWrite"
         private const val SAMPLE_RATE = 16000
+
+        // Foreground-service notification — keeps the process in the OEM
+        // "foreground" tier so it is not SIGKILLed by aggressive memory managers.
+        private const val NOTIFICATION_ID = 1001
+        private const val CHANNEL_ID = "stw_persistent"
 
         // Two-zone button dimensions
         private const val MIC_DP = 48
@@ -165,11 +176,80 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         observeModelLoading()
         registerLockScreenReceiver()
         registerPrefListener()
+        promoteForeground()
+    }
+
+    // ====================================================================
+    // Foreground-service promotion
+    // ====================================================================
+
+    /**
+     * Elevates this service into Android's foreground-service process tier by
+     * calling startForeground().  A foreground service is treated like a music
+     * player or navigation app — the OS will not SIGKILL it under normal memory
+     * pressure, only under extreme / emergency conditions.
+     *
+     * Requirements met:
+     *  • FOREGROUND_SERVICE permission declared in manifest
+     *  • FOREGROUND_SERVICE_SPECIAL_USE permission declared in manifest
+     *  • android:foregroundServiceType="specialUse" on the <service> element
+     *  • <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"> declared
+     *
+     * Notification design: IMPORTANCE_LOW (silent, no badge, no sound).  The
+     * notification is ongoing and non-dismissable, per foreground-service rules.
+     * Tapping it opens the main app.
+     */
+    private fun promoteForeground() {
+        val nm = getSystemService(NotificationManager::class.java)
+
+        // Create the notification channel once (safe to call repeatedly).
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Speak to Write — Active",
+            NotificationManager.IMPORTANCE_LOW          // silent, no vibration, no badge
+        ).apply {
+            description = "Shows while the mic overlay is active. Required to keep the service running."
+            setShowBadge(false)
+            enableVibration(false)
+            enableLights(false)
+        }
+        nm.createNotificationChannel(channel)
+
+        // Tapping the notification opens the main app.
+        val openApp = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Speak to Write")
+            .setContentText("Mic overlay active — tap anywhere to dictate")
+            .setSmallIcon(R.drawable.ic_mic)
+            .setContentIntent(openApp)
+            .setOngoing(true)           // non-dismissable by swipe
+            .setSilent(true)            // no sound / vibration regardless of channel
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET) // hidden on lock screen
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+        ServiceLogger.i(TAG, "promoteForeground() — process elevated to foreground-service tier")
     }
 
     override fun onDestroy() {
         ServiceLogger.w(TAG, "onDestroy() — service is being torn down")
         instance = null
+        // Step down from foreground before tearing down (best-effort — if the
+        // OS is hard-killing us this may not run, which is fine).
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            ServiceLogger.w(TAG, "stopForeground failed: ${e.message}")
+        }
         // Cancel ALL coroutines tied to this service instance
         serviceJob.cancel()
         observeJob?.cancel()
