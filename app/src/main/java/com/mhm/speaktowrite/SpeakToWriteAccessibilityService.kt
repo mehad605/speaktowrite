@@ -155,7 +155,13 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
     // Token used to debounce rapid overlay-rebuild requests from the pref listener
-    private val overlayRebuildToken = Any()
+    private val overlayRebuildRunnable = Runnable {
+        if (instance != null) {
+            ServiceLogger.d(TAG, "Rebuilding overlay after pref change")
+            removeOverlay()
+            showOverlay()
+        }
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
     private val dp get() = resources.displayMetrics.density
@@ -202,18 +208,19 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
     private fun promoteForeground() {
         val nm = getSystemService(NotificationManager::class.java)
 
-        // Create the notification channel once (safe to call repeatedly).
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Speak to Write — Active",
-            NotificationManager.IMPORTANCE_LOW          // silent, no vibration, no badge
-        ).apply {
-            description = "Shows while the mic overlay is active. Required to keep the service running."
-            setShowBadge(false)
-            enableVibration(false)
-            enableLights(false)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Speak to Write — Active",
+                NotificationManager.IMPORTANCE_LOW          // silent, no vibration, no badge
+            ).apply {
+                description = "Shows while the mic overlay is active. Required to keep the service running."
+                setShowBadge(false)
+                enableVibration(false)
+                enableLights(false)
+            }
+            nm.createNotificationChannel(channel)
         }
-        nm.createNotificationChannel(channel)
 
         // Tapping the notification opens the main app.
         val openApp = PendingIntent.getActivity(
@@ -255,8 +262,8 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
         observeJob?.cancel()
         unregisterLockScreenReceiver()
         unregisterPrefListener()
-        // Remove any pending debounced overlay rebuilds
-        handler.removeCallbacksAndMessages(overlayRebuildToken)
+        // Remove any pending debounced UI rebuilds.
+        handler.removeCallbacks(overlayRebuildRunnable)
         removeOverlay()
         removeDropdown()
         super.onDestroy()
@@ -1620,19 +1627,10 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                 // Debounce: cancel any pending rebuild and schedule a fresh one.
                 // This prevents a rapid burst of pref changes (e.g. dragging the
                 // opacity slider) from flooding the WindowManager with rebuild calls.
-                handler.removeCallbacksAndMessages(overlayRebuildToken)
-                handler.postDelayed(
-                    /* r= */ {
-                        // Guard: ensure service is still alive before rebuilding
-                        if (instance != null) {
-                            ServiceLogger.d(TAG, "Rebuilding overlay after pref change: $key")
-                            removeOverlay()
-                            showOverlay()
-                        }
-                    },
-                    /* token= */ overlayRebuildToken,
-                    /* delayMillis= */ 120L   // 120 ms debounce
-                )
+                handler.removeCallbacks(overlayRebuildRunnable)
+                handler.postDelayed(overlayRebuildRunnable, 100L)
+            } else if (key == "custom_words") {
+                // No overlay rebuild needed for custom words; they are fetched dynamically on process.
             }
         }
         val prefs = getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
