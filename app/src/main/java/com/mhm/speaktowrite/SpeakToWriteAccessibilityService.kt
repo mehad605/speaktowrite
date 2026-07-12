@@ -640,7 +640,7 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                             val dy = ev.rawY - touchY
                             val isTap = abs(dx) < TAP_THRESHOLD_DP * dp && abs(dy) < TAP_THRESHOLD_DP * dp
                             val swipeThreshold = 30 * dp
-                            val expand = isTap || if (isLeftEdge) {
+                            val expand = if (isLeftEdge) {
                                 dx > swipeThreshold
                             } else {
                                 dx < -swipeThreshold
@@ -1394,12 +1394,14 @@ class SpeakToWriteAccessibilityService : AccessibilityService() {
                     i += 2
                 }
 
+                val settings = com.mhm.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
+                
                 val rawText = TranscriberManager.transcriber?.transcribe(floatArray, SAMPLE_RATE) ?: ""
-                ServiceLogger.d(TAG, "Transcription result: ${rawText.take(120)}")
+                val processedText = com.mhm.speaktowrite.models.LocalVoiceCommandProcessor.process(rawText, settings.customWords)
+                ServiceLogger.d(TAG, "Transcription result: ${processedText.take(120)}")
 
-                var finalText = rawText
+                var finalText = processedText
                 if (finalText.isNotBlank()) {
-                    val settings = com.mhm.speaktowrite.models.SettingsManager(this@SpeakToWriteAccessibilityService)
                     if (settings.cleanupEnabled && settings.apiKey.isNotBlank()) {
                         val promptText = settings.prompts.find { it.id == settings.selectedPromptId }?.content ?: ""
                         val cleaned = com.mhm.speaktowrite.models.PostProcessor.process(

@@ -109,4 +109,35 @@ class SettingsManager(context: Context) {
         }
         return arr.toString()
     }
+
+    var customWords: List<CustomWord>
+        get() {
+            val jsonStr = prefs.getString("custom_words", null) ?: return emptyList()
+            val saved = mutableListOf<CustomWord>()
+            try {
+                val arr = JSONArray(jsonStr)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    saved.add(CustomWord(obj.getString("id"), obj.getString("spokenPhrase"), obj.getString("replacementText")))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            return saved
+        }
+        set(value) {
+            prefs.edit().putString("custom_words", encodeCustomWords(value)).apply()
+        }
+
+    private fun encodeCustomWords(list: List<CustomWord>): String {
+        val arr = JSONArray()
+        for (w in list) {
+            val obj = JSONObject()
+            obj.put("id", w.id)
+            obj.put("spokenPhrase", w.spokenPhrase)
+            obj.put("replacementText", w.replacementText)
+            arr.put(obj)
+        }
+        return arr.toString()
+    }
 }

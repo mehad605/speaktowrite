@@ -148,6 +148,9 @@ fun MainScreen(modifier: Modifier = Modifier) {
     var isCheckingKey by remember { mutableStateOf(false) }
     var isValidKey by remember { mutableStateOf<Boolean?>(null) }
     var expandedModelDropdown by remember { mutableStateOf(false) }
+    
+    val customWords = remember { mutableStateListOf(*settingsManager.customWords.toTypedArray()) }
+    var showCustomWordDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(context) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -502,6 +505,18 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     },
                 )
 
+                Spacer(Modifier.height(28.dp))
+
+                // ── Step 4: Custom Words ───────────────────────────────────
+                com.mhm.speaktowrite.ui.sections.CustomWordsSection(
+                    customWords = customWords,
+                    onAddWord = { showCustomWordDialog = true },
+                    onDeleteWord = { word ->
+                        customWords.remove(word)
+                        settingsManager.customWords = customWords
+                    }
+                )
+
                 // Footer hint.
                 Spacer(Modifier.height(36.dp))
                 Text(
@@ -539,6 +554,17 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
     if (showHelpDialog) {
         HelpDialog(onDismiss = { showHelpDialog = false })
+    }
+
+    if (showCustomWordDialog) {
+        com.mhm.speaktowrite.ui.dialogs.CustomWordEditorDialog(
+            onDismiss = { showCustomWordDialog = false },
+            onSave = { phrase, replacement ->
+                customWords.add(com.mhm.speaktowrite.models.CustomWord(System.currentTimeMillis().toString(), phrase, replacement))
+                settingsManager.customWords = customWords.toList()
+                showCustomWordDialog = false
+            }
+        )
     }
 
     if (showPromptDialog) {

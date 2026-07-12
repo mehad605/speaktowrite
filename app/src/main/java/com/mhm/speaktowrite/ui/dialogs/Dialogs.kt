@@ -468,3 +468,69 @@ private fun shareLogFile(context: android.content.Context, logFile: File) {
     }
     context.startActivity(Intent.createChooser(intent, "Share log via…"))
 }
+
+@Composable
+fun CustomWordEditorDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var phrase by remember { mutableStateOf("") }
+    var replacement by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = "Add Custom Word",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = phrase,
+                    onValueChange = { phrase = it },
+                    label = { Text("Spoken phrase") },
+                    placeholder = { Text("e.g. insert email") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = replacement,
+                    onValueChange = { replacement = it },
+                    label = { Text("Replaced with") },
+                    placeholder = { Text("e.g. my.email@gmail.com") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    BrandButton(
+                        text = "Save",
+                        onClick = { onSave(phrase.trim(), replacement.trim()) },
+                        enabled = phrase.isNotBlank() && replacement.isNotBlank()
+                    )
+                }
+            }
+        }
+    }
+}
