@@ -4,13 +4,7 @@ object LocalVoiceCommandProcessor {
     fun process(input: String, customWords: List<CustomWord> = emptyList()): String {
         var text = input
 
-        // Custom Words (User defined, highest priority)
-        for (word in customWords) {
-            if (word.spokenPhrase.isNotBlank() && word.replacementText.isNotBlank()) {
-                val escapedPhrase = Regex.escape(word.spokenPhrase.trim())
-                text = text.replace(Regex("(?i)\\b$escapedPhrase\\b"), word.replacementText)
-            }
-        }
+        // Custom words are now handled by Sherpa-ONNX hotwords natively.
 
         // Formatting
         val formatting = mapOf(

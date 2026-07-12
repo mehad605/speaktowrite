@@ -6,7 +6,7 @@ import com.mhm.speaktowrite.ui.main.PromptPreset
 import org.json.JSONArray
 import org.json.JSONObject
 
-class SettingsManager(context: Context) {
+class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("speaktowrite_prefs", Context.MODE_PRIVATE)
 
     var apiKey: String
@@ -118,7 +118,11 @@ class SettingsManager(context: Context) {
                 val arr = JSONArray(jsonStr)
                 for (i in 0 until arr.length()) {
                     val obj = arr.getJSONObject(i)
-                    saved.add(CustomWord(obj.getString("id"), obj.getString("spokenPhrase"), obj.getString("replacementText")))
+                    // Support new format or fallback to legacy format
+                    val word = if (obj.has("word")) obj.getString("word") else obj.optString("replacementText", "")
+                    if (word.isNotBlank()) {
+                        saved.add(CustomWord(obj.getString("id"), word))
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -127,6 +131,12 @@ class SettingsManager(context: Context) {
         }
         set(value) {
             prefs.edit().putString("custom_words", encodeCustomWords(value)).apply()
+            try {
+                val hotwordsFile = java.io.File(context.filesDir, "hotwords.txt")
+                hotwordsFile.writeText(value.joinToString("\n") { it.word })
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
     private fun encodeCustomWords(list: List<CustomWord>): String {
@@ -134,8 +144,7 @@ class SettingsManager(context: Context) {
         for (w in list) {
             val obj = JSONObject()
             obj.put("id", w.id)
-            obj.put("spokenPhrase", w.spokenPhrase)
-            obj.put("replacementText", w.replacementText)
+            obj.put("word", w.word)
             arr.put(obj)
         }
         return arr.toString()

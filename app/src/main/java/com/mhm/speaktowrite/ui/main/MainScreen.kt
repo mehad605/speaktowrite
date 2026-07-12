@@ -514,6 +514,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     onDeleteWord = { word ->
                         customWords.remove(word)
                         settingsManager.customWords = customWords
+                        TranscriberManager.reloadModel(context)
                     }
                 )
 
@@ -559,9 +560,10 @@ fun MainScreen(modifier: Modifier = Modifier) {
     if (showCustomWordDialog) {
         com.mhm.speaktowrite.ui.dialogs.CustomWordEditorDialog(
             onDismiss = { showCustomWordDialog = false },
-            onSave = { phrase, replacement ->
-                customWords.add(com.mhm.speaktowrite.models.CustomWord(System.currentTimeMillis().toString(), phrase, replacement))
+            onSave = { word ->
+                customWords.add(com.mhm.speaktowrite.models.CustomWord(System.currentTimeMillis().toString(), word))
                 settingsManager.customWords = customWords.toList()
+                TranscriberManager.reloadModel(context)
                 showCustomWordDialog = false
             }
         )

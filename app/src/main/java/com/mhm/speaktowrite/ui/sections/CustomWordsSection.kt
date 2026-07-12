@@ -56,7 +56,7 @@ fun CustomWordsSection(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Map spoken phrases to specific text.",
+                        text = "Provide hints for unique names or jargon.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -79,16 +79,9 @@ fun CustomWordsSection(
                     
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "\"${word.spokenPhrase}\"",
+                            text = word.word,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "→ ${word.replacementText}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

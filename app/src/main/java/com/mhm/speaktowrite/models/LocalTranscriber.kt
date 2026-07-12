@@ -7,7 +7,8 @@ import java.io.File
 
 class LocalTranscriber private constructor(
     private val offlineRecognizer: OfflineRecognizer? = null,
-    private val onlineRecognizer: OnlineRecognizer? = null
+    private val onlineRecognizer: OnlineRecognizer? = null,
+    private val hotwordsPath: String? = null
 ) {
 
     fun transcribe(samples: FloatArray, sampleRate: Int = 16000): String {
@@ -52,16 +53,27 @@ class LocalTranscriber private constructor(
                 return null
             }
 
+            val hotwordsFile = File(ctx.filesDir, "hotwords.txt")
+            val hasHotwords = hotwordsFile.exists() && hotwordsFile.length() > 0
+
             return try {
-                val onlineConfig = detectOnlineModelConfig(modelDir)
+                var onlineConfig = detectOnlineModelConfig(modelDir)
                 if (onlineConfig != null) {
+                    if (hasHotwords) {
+                        onlineConfig.hotwordsFile = hotwordsFile.absolutePath
+                        onlineConfig.hotwordsScore = 1.5f
+                    }
                     val recognizer = OnlineRecognizer(assetManager = null, config = onlineConfig)
                     Log.i(TAG, "Loaded online model: $modelName")
-                    return LocalTranscriber(onlineRecognizer = recognizer)
+                    return LocalTranscriber(onlineRecognizer = recognizer, hotwordsPath = if (hasHotwords) hotwordsFile.absolutePath else null)
                 }
 
-                val offlineConfig = detectModelConfig(modelDir)
+                var offlineConfig = detectModelConfig(modelDir)
                 if (offlineConfig != null) {
+                    if (hasHotwords) {
+                        offlineConfig.hotwordsFile = hotwordsFile.absolutePath
+                        offlineConfig.hotwordsScore = 1.5f
+                    }
                     val recognizer = OfflineRecognizer(assetManager = null, config = offlineConfig)
                     Log.i(TAG, "Loaded offline model: $modelName")
                     return LocalTranscriber(offlineRecognizer = recognizer)

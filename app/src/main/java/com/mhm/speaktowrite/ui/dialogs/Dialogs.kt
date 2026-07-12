@@ -472,10 +472,9 @@ private fun shareLogFile(context: android.content.Context, logFile: File) {
 @Composable
 fun CustomWordEditorDialog(
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String) -> Unit
 ) {
-    var phrase by remember { mutableStateOf("") }
-    var replacement by remember { mutableStateOf("") }
+    var word by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -496,21 +495,10 @@ fun CustomWordEditorDialog(
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = phrase,
-                    onValueChange = { phrase = it },
-                    label = { Text("Spoken phrase") },
-                    placeholder = { Text("e.g. insert email") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = replacement,
-                    onValueChange = { replacement = it },
-                    label = { Text("Replaced with") },
-                    placeholder = { Text("e.g. my.email@gmail.com") },
+                    value = word,
+                    onValueChange = { word = it },
+                    label = { Text("Word or Phrase") },
+                    placeholder = { Text("e.g. Siobhan") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -526,8 +514,8 @@ fun CustomWordEditorDialog(
                     Spacer(Modifier.width(8.dp))
                     BrandButton(
                         text = "Save",
-                        onClick = { onSave(phrase.trim(), replacement.trim()) },
-                        enabled = phrase.isNotBlank() && replacement.isNotBlank()
+                        onClick = { onSave(word.trim()) },
+                        enabled = word.isNotBlank()
                     )
                 }
             }

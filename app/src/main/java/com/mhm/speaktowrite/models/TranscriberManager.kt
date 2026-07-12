@@ -63,6 +63,18 @@ object TranscriberManager {
             return
         }
 
+        executeModelLoad(context, modelName)
+    }
+
+    fun reloadModel(context: Context) {
+        val current = currentModel.value ?: return
+        synchronized(transcriberCache) {
+            transcriberCache.remove(current)?.release()
+        }
+        executeModelLoad(context, current)
+    }
+
+    private fun executeModelLoad(context: Context, modelName: String) {
         ServiceLogger.i(TAG, "loadModel($modelName) starting")
 
         isLoading.value = true
