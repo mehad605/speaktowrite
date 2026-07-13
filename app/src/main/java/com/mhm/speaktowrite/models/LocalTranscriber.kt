@@ -57,23 +57,15 @@ class LocalTranscriber private constructor(
             val hasHotwords = hotwordsFile.exists() && hotwordsFile.length() > 0
 
             return try {
-                var onlineConfig = detectOnlineModelConfig(modelDir)
+                val onlineConfig = detectOnlineModelConfig(modelDir, if (hasHotwords) hotwordsFile.absolutePath else null)
                 if (onlineConfig != null) {
-                    if (hasHotwords) {
-                        onlineConfig.hotwordsFile = hotwordsFile.absolutePath
-                        onlineConfig.hotwordsScore = 1.5f
-                    }
                     val recognizer = OnlineRecognizer(assetManager = null, config = onlineConfig)
                     Log.i(TAG, "Loaded online model: $modelName")
                     return LocalTranscriber(onlineRecognizer = recognizer, hotwordsPath = if (hasHotwords) hotwordsFile.absolutePath else null)
                 }
 
-                var offlineConfig = detectModelConfig(modelDir)
+                val offlineConfig = detectModelConfig(modelDir, if (hasHotwords) hotwordsFile.absolutePath else null)
                 if (offlineConfig != null) {
-                    if (hasHotwords) {
-                        offlineConfig.hotwordsFile = hotwordsFile.absolutePath
-                        offlineConfig.hotwordsScore = 1.5f
-                    }
                     val recognizer = OfflineRecognizer(assetManager = null, config = offlineConfig)
                     Log.i(TAG, "Loaded offline model: $modelName")
                     return LocalTranscriber(offlineRecognizer = recognizer)
@@ -87,7 +79,7 @@ class LocalTranscriber private constructor(
             }
         }
 
-        private fun detectOnlineModelConfig(dir: File): OnlineRecognizerConfig? {
+        private fun detectOnlineModelConfig(dir: File, hotwordsFilePath: String?): OnlineRecognizerConfig? {
             val p = dir.absolutePath
             val tokens = "$p/tokens.txt"
             if (!File(tokens).exists()) return null
@@ -112,13 +104,15 @@ class LocalTranscriber private constructor(
                         bpeVocab = if (bpe.exists()) bpe.absolutePath else "",
                         numThreads = 4,
                         modelType = "",
-                    )
+                    ),
+                    hotwordsFile = hotwordsFilePath ?: "",
+                    hotwordsScore = if (hotwordsFilePath != null) 1.5f else 0.0f
                 )
             }
             return null
         }
 
-        private fun detectModelConfig(dir: File): OfflineRecognizerConfig? {
+        private fun detectModelConfig(dir: File, hotwordsFilePath: String?): OfflineRecognizerConfig? {
             val p = dir.absolutePath
             val tokens = "$p/tokens.txt"
             if (!File(tokens).exists()) return null
@@ -168,7 +162,9 @@ class LocalTranscriber private constructor(
                         tokens = tokens,
                         numThreads = 4,
                         modelType = "nemo_transducer",
-                    )
+                    ),
+                    hotwordsFile = hotwordsFilePath ?: "",
+                    hotwordsScore = if (hotwordsFilePath != null) 1.5f else 0.0f
                 )
             }
 
