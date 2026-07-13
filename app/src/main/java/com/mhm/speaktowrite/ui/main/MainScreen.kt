@@ -514,7 +514,10 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     onDeleteWord = { word ->
                         customWords.remove(word)
                         settingsManager.customWords = customWords
-                        TranscriberManager.reloadModel(context)
+                        val curr = TranscriberManager.currentModel.value
+                        if (curr != null && com.mhm.speaktowrite.models.LocalTranscriber.supportsHotwords(context, curr)) {
+                            TranscriberManager.reloadModel(context)
+                        }
                     }
                 )
 
@@ -563,7 +566,10 @@ fun MainScreen(modifier: Modifier = Modifier) {
             onSave = { word ->
                 customWords.add(com.mhm.speaktowrite.models.CustomWord(System.currentTimeMillis().toString(), word))
                 settingsManager.customWords = customWords.toList()
-                TranscriberManager.reloadModel(context)
+                val curr = TranscriberManager.currentModel.value
+                if (curr != null && com.mhm.speaktowrite.models.LocalTranscriber.supportsHotwords(context, curr)) {
+                    TranscriberManager.reloadModel(context)
+                }
                 showCustomWordDialog = false
             }
         )

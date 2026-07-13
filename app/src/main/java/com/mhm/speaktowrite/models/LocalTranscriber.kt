@@ -46,6 +46,29 @@ class LocalTranscriber private constructor(
     companion object {
         private const val TAG = "LocalTranscriber"
 
+        fun supportsHotwords(ctx: Context, modelName: String): Boolean {
+            val modelDir = File(ctx.filesDir, "models/$modelName")
+            if (!modelDir.exists()) return false
+            val p = modelDir.absolutePath
+
+            // Check for streaming zipformer/transducer
+            val encoder = findFile(p, "encoder")
+            val decoder = findFile(p, "decoder")
+            val joiner = findFile(p, "joiner")
+            if (encoder != null && decoder != null && joiner != null && (p.contains("streaming") || p.contains("online"))) {
+                return true
+            }
+
+            if (File("$p/preprocess.onnx").exists()) return false
+
+            if (encoder != null && decoder != null && joiner == null) return false
+
+            // Check for offline transducer
+            if (encoder != null && decoder != null && joiner != null) return true
+
+            return false
+        }
+
         fun create(ctx: Context, modelName: String): LocalTranscriber? {
             val modelDir = File(ctx.filesDir, "models/$modelName")
             if (!modelDir.exists()) {
