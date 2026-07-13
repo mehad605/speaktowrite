@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.io.File
 
 object TranscriberManager {
@@ -66,12 +68,18 @@ object TranscriberManager {
         executeModelLoad(context, modelName)
     }
 
+    private var reloadJob: Job? = null
+
     fun reloadModel(context: Context) {
         val current = currentModel.value ?: return
-        synchronized(transcriberCache) {
-            transcriberCache.remove(current)?.release()
+        reloadJob?.cancel()
+        reloadJob = CoroutineScope(Dispatchers.Main).launch {
+            delay(1500)
+            synchronized(transcriberCache) {
+                transcriberCache.remove(current)?.release()
+            }
+            executeModelLoad(context, current)
         }
-        executeModelLoad(context, current)
     }
 
     private fun executeModelLoad(context: Context, modelName: String) {
