@@ -75,9 +75,8 @@ object TranscriberManager {
         reloadJob?.cancel()
         reloadJob = CoroutineScope(Dispatchers.Main).launch {
             delay(1500)
-            synchronized(transcriberCache) {
-                transcriberCache.remove(current)?.release()
-            }
+            // Do NOT remove the old model from the cache yet. 
+            // We want to seamlessly hot-swap it once the new one is fully loaded.
             executeModelLoad(context, current)
         }
     }
@@ -94,9 +93,12 @@ object TranscriberManager {
             try {
                 val newTranscriber = LocalTranscriber.create(context, modelName)
                 if (newTranscriber != null) {
+                    val oldTranscriber: LocalTranscriber?
                     synchronized(transcriberCache) {
-                        transcriberCache.put(modelName, newTranscriber)
+                        oldTranscriber = transcriberCache.put(modelName, newTranscriber)
                     }
+                    // Release the old transcriber only AFTER the new one has safely taken its place
+                    oldTranscriber?.release()
                     ServiceLogger.i(TAG, "loadModel($modelName) SUCCESS")
                 } else {
                     throw Exception("Failed to instantiate model")
